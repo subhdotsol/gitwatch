@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '../../../../../lib/prisma';
-import { bot } from '../../../../../lib/telegram/bot';
+import { Telegraf } from 'telegraf';
+
+// Create a simple Telegram client for sending messages (no command handlers)
+const telegram = new Telegraf(process.env.TELEGRAM_BOT_TOKEN!).telegram;
 
 // This endpoint should be called by a cron job (e.g., Vercel Cron, GitHub Actions)
 // Recommended: every 5-10 minutes
@@ -77,7 +80,7 @@ export async function GET(request: Request) {
           const message = formatEventMessage(event, owner, repo);
           if (message) {
             try {
-              await bot.telegram.sendMessage(user.telegramId.toString(), message, {
+              await telegram.sendMessage(user.telegramId.toString(), message, {
                 parse_mode: 'Markdown',
                 link_preview_options: { is_disabled: true },
               });

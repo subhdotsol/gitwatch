@@ -23,8 +23,8 @@ if [ -z "$VERCEL_URL" ]; then
   exit 1
 fi
 
-# Remove https:// if user included it
-VERCEL_URL=$(echo "$VERCEL_URL" | sed 's|https://||g' | sed 's|http://||g')
+# Remove https:// if user included it, and remove trailing slashes
+VERCEL_URL=$(echo "$VERCEL_URL" | sed 's|https://||g' | sed 's|http://||g' | sed 's|/$||g')
 
 WEBHOOK_URL="https://${VERCEL_URL}/api/telegram/webhook"
 
