@@ -9,7 +9,7 @@ export default function AuthSuccess() {
                     You can close this window and return to Telegram.
                 </p>
                 <a
-                    href="https://t.me/gitwatch_bot"
+                    href="https://t.me/Gitwtch_bot"
                     className="inline-block px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                 >
                     Return to Telegram

@@ -27,7 +27,7 @@ export default function Hero() {
 
                 <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                     <Link
-                        href="https://t.me/gitwatch_bot"
+                        href="https://t.me/Gitwtch_bot"
                         target="_blank"
                         className="w-full sm:w-auto flex items-center justify-center gap-2 rounded-full bg-blue-600 px-6 py-3 text-sm font-semibold text-white transition-all hover:bg-blue-500 hover:shadow-[0_0_30px_rgba(37,99,235,0.4)] shadow-[0_0_20px_rgba(37,99,235,0.2)]"
                     >

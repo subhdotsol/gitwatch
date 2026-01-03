@@ -204,7 +204,7 @@ const cards = [
         icon: <Bell className="h-12 w-12 text-white" />,
         color: "bg-blue-500",
         ctaText: "Get Started",
-        ctaLink: "https://t.me/gitwatch_bot",
+        ctaLink: "https://t.me/Gitwtch_bot",
         content: () => {
             return (
                 <p>
@@ -219,7 +219,7 @@ const cards = [
         icon: <Zap className="h-12 w-12 text-white" />,
         color: "bg-yellow-500",
         ctaText: "Try It Now",
-        ctaLink: "https://t.me/gitwatch_bot",
+        ctaLink: "https://t.me/Gitwtch_bot",
         content: () => {
             return (
                 <p>
@@ -234,7 +234,7 @@ const cards = [
         icon: <MessageSquare className="h-12 w-12 text-white" />,
         color: "bg-green-500",
         ctaText: "Join Team",
-        ctaLink: "https://t.me/gitwatch_bot",
+        ctaLink: "https://t.me/Gitwtch_bot",
         content: () => {
             return (
                 <p>

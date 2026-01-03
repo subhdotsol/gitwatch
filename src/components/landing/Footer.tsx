@@ -28,7 +28,7 @@ export default function Footer() {
                         <Link href="https://github.com/gitwatch-org" target="_blank">
                             <Github className="h-5 w-5 text-white/60 hover:text-white transition-colors" />
                         </Link>
-                        <Link href="https://t.me/gitwatch_bot" target="_blank">
+                        <Link href="https://t.me/Gitwtch_bot" target="_blank">
                             <Send className="h-5 w-5 text-white/60 hover:text-[#229ED9] transition-colors" />
                         </Link>
                         <p className="text-xs text-gray-500">
