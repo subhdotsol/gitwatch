@@ -4,7 +4,7 @@ import { registerWatchCommand } from '../../../../../lib/telegram/commands/watch
 import { registerHelpCommand } from '../../../../../lib/telegram/commands/help';
 import { registerWatchlistCommand } from '../../../../../lib/telegram/commands/watchlist';
 import { registerDisconnectCommand } from '../../../../../lib/telegram/commands/disconnect';
-import { registerUnwatchCommand } '../../../../../lib/telegram/commands/unwatch';
+import { registerUnwatchCommand } from '../../../../../lib/telegram/commands/unwatch';
 
 // Initialize bot (without launch - we'll handle updates via webhook)
 const bot = new Telegraf(process.env.TELEGRAM_BOT_TOKEN!);
