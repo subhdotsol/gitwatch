@@ -50,6 +50,8 @@ export async function GET(request: Request) {
         const since = lastPolled || new Date(Date.now() - 10 * 60 * 1000);
         const sinceISO = since.toISOString();
 
+        console.log(`[${owner}/${repo}] Checking events since: ${sinceISO}`);
+
         // Fetch events from GitHub API
         const eventsResponse = await fetch(
           `https://api.github.com/repos/${owner}/${repo}/events?per_page=10`,
@@ -68,18 +70,24 @@ export async function GET(request: Request) {
         }
 
         const events = await eventsResponse.json();
+        console.log(`[${owner}/${repo}] Found ${events.length} total events`);
 
         // Filter events that happened after lastPolled
         const newEvents = events.filter((event: any) => {
           const eventDate = new Date(event.created_at);
-          return eventDate > since;
+          const isNew = eventDate > since;
+          console.log(`  Event: ${event.type} at ${event.created_at} - ${isNew ? 'NEW' : 'OLD'}`);
+          return isNew;
         });
+
+        console.log(`[${owner}/${repo}] ${newEvents.length} new events to notify`);
 
         // Send notifications for new events
         for (const event of newEvents) {
           const message = formatEventMessage(event, owner, repo);
           if (message) {
             try {
+              console.log(`Sending notification for ${event.type} to ${user.telegramId}`);
               await telegram.sendMessage(user.telegramId.toString(), message, {
                 parse_mode: 'Markdown',
                 link_preview_options: { is_disabled: true },
@@ -88,6 +96,8 @@ export async function GET(request: Request) {
             } catch (error) {
               console.error(`Failed to send notification to ${user.telegramId}:`, error);
             }
+          } else {
+            console.log(`  Skipping ${event.type} - no message formatter`);
           }
         }
 
