@@ -1,21 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Telegraf } from 'telegraf';
 import { registerWatchCommand } from '../../../../../lib/telegram/commands/watch';
+import { registerHelpCommand } from '../../../../../lib/telegram/commands/help';
+import { registerWatchlistCommand } from '../../../../../lib/telegram/commands/watchlist';
 
 // Initialize bot (without launch - we'll handle updates via webhook)
 const bot = new Telegraf(process.env.TELEGRAM_BOT_TOKEN!);
 
-// In-memory user storage (use database in production)
-const users = new Map<number, { telegramId: number; githubToken?: string }>();
-
 // Register commands
 bot.start(async (ctx) => {
-  const telegramId = ctx.from?.id;
+  const { prisma } = await import('../../../../../lib/prisma');
+  const telegramId = BigInt(ctx.from?.id);
   const username = ctx.from?.username || ctx.from?.first_name;
 
-  if (telegramId && !users.has(telegramId)) {
-    users.set(telegramId, { telegramId });
-  }
+  await prisma.user.upsert({
+    where: { telegramId },
+    update: { telegramUsername: username },
+    create: {
+      telegramId,
+      telegramUsername: username,
+    },
+  });
 
   const authUrl = `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/github?telegram_id=${telegramId}`;
   await ctx.reply(
@@ -30,10 +35,12 @@ bot.start(async (ctx) => {
   );
 });
 
-registerWatchCommand(bot, users);
+registerWatchCommand(bot);
+registerHelpCommand(bot);
+registerWatchlistCommand(bot);
 
-// Export for use in callback route
-export { bot, users };
+// Export bot
+export { bot };
 
 // Webhook handler
 export async function POST(request: NextRequest) {

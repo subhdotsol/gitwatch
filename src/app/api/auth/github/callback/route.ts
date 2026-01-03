@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '../../../../../../lib/prisma';
+import { Telegraf } from 'telegraf';
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
@@ -43,14 +45,17 @@ export async function GET(request: NextRequest) {
 
   const githubUser = await userResponse.json();
 
-  // Store in memory (use Prisma/DB in production)
-  const { users, bot } = await import('../../../../../../lib/telegram/bot');
-  const user = users.get(parseInt(telegramId));
-  if (user) {
-    user.githubToken = accessToken;
-  }
+  // Store in database
+  await prisma.user.update({
+    where: { telegramId: BigInt(telegramId) },
+    data: {
+      githubToken: accessToken,
+      githubUsername: githubUser.login,
+    },
+  });
 
   // Notify user on Telegram
+  const bot = new Telegraf(process.env.TELEGRAM_BOT_TOKEN!);
   await bot.telegram.sendMessage(
     telegramId,
     `✅ Successfully connected to GitHub!\n\n` +

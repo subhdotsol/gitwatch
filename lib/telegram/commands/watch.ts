@@ -1,31 +1,53 @@
 import { Telegraf } from 'telegraf';
+import { prisma } from '../../prisma';
 
-export function registerWatchCommand(bot: Telegraf, users: Map<number, { telegramId: number; githubToken?: string }>) {
+export function registerWatchCommand(bot: Telegraf) {
   bot.command('watch', async (ctx) => {
-    const telegramId = ctx.from.id;
-    const user = users.get(telegramId);
-
-    if (!user?.githubToken) {
-      return ctx.reply(
-        '⚠️ Please connect your GitHub account first using /start'
-      );
-    }
-
-    // Parse repo from command: /watch owner/repo
-    const match = ctx.message.text.match(/\/watch\s+(.+)/);
-    if (!match) {
-      return ctx.reply(
-        '❌ Invalid format. Use: /watch owner/repo\n\n' +
-        'Example: /watch facebook/react'
-      );
-    }
-
-    const [owner, repo] = match[1].split('/');
-    if (!owner || !repo) {
-      return ctx.reply('❌ Invalid repository format. Use: owner/repo');
-    }
+    const telegramId = BigInt(ctx.from.id);
 
     try {
+      // Get user from database
+      let user = await prisma.user.findUnique({
+        where: { telegramId },
+      });
+
+      if (!user?.githubToken) {
+        return ctx.reply(
+          '⚠️ Please connect your GitHub account first using /start'
+        );
+      }
+
+      // Parse repo from command: /watch owner/repo
+      const match = ctx.message.text.match(/\/watch\s+(.+)/);
+      if (!match) {
+        return ctx.reply(
+          '❌ Invalid format. Use: /watch owner/repo\n\n' +
+          'Example: /watch facebook/react'
+        );
+      }
+
+      const [owner, repo] = match[1].split('/');
+      if (!owner || !repo) {
+        return ctx.reply('❌ Invalid repository format. Use: owner/repo');
+      }
+
+      // Check if already watching
+      const existing = await prisma.watchedRepo.findUnique({
+        where: {
+          userId_owner_repo: {
+            userId: user.id,
+            owner,
+            repo,
+          },
+        },
+      });
+
+      if (existing) {
+        return ctx.reply(`✅ You're already watching **${owner}/${repo}**!`, {
+          parse_mode: 'Markdown',
+        });
+      }
+
       // Verify repo exists and user has access
       const repoResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}`, {
         headers: {
@@ -72,15 +94,16 @@ export function registerWatchCommand(bot: Telegraf, users: Map<number, { telegra
 
       const webhook = await webhookResponse.json();
 
-      // TODO: Store in database
-      // await prisma.watchedRepo.create({
-      //   data: {
-      //     telegramId,
-      //     owner,
-      //     repo,
-      //     webhookId: webhook.id,
-      //   },
-      // });
+      // Save to database
+      await prisma.watchedRepo.create({
+        data: {
+          userId: user.id,
+          owner,
+          repo,
+          webhookId: BigInt(webhook.id),
+          active: true,
+        },
+      });
 
       await ctx.reply(
         `✅ Now watching **${owner}/${repo}**!\n\n` +
