@@ -35,7 +35,9 @@ export function registerWatchlistCommand(bot: Telegraf) {
       let message = `📋 **Your Watchlist** (${user.watchedRepos.length} repos)\n\n`;
 
       user.watchedRepos.forEach((repo, index) => {
-        message += `${index + 1}. **${repo.owner}/${repo.repo}**\n`;
+        const modeIcon = repo.watchMode === 'webhook' ? '⚡' : '🔄';
+        const modeText = repo.watchMode === 'webhook' ? 'Real-time' : 'Polling';
+        message += `${index + 1}. **${repo.owner}/${repo.repo}** ${modeIcon} ${modeText}\n`;
         message += `   Added: ${repo.createdAt.toLocaleDateString()}\n\n`;
       });
 

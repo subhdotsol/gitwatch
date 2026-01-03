@@ -17,18 +17,47 @@ export function registerWatchCommand(bot: Telegraf) {
         );
       }
 
-      // Parse repo from command: /watch owner/repo
+      // Parse repo from command: /watch owner/repo OR /watch https://github.com/owner/repo
       const match = ctx.message.text.match(/\/watch\s+(.+)/);
       if (!match) {
         return ctx.reply(
-          '❌ Invalid format. Use: /watch owner/repo\n\n' +
+          '❌ Invalid format. Use one of:\n' +
+          '• /watch owner/repo\n' +
+          '• /watch https://github.com/owner/repo\n\n' +
           'Example: /watch facebook/react'
         );
       }
 
-      const [owner, repo] = match[1].split('/');
+      let owner: string;
+      let repo: string;
+
+      const input = match[1].trim();
+      
+      // Check if input is a GitHub URL
+      const urlMatch = input.match(/(?:https?:\/\/)?(?:www\.)?github\.com\/([^\/]+)\/([^\/\s]+)/);
+      if (urlMatch) {
+        // Extract from URL: https://github.com/owner/repo
+        owner = urlMatch[1];
+        repo = urlMatch[2];
+      } else {
+        // Parse as owner/repo format
+        const parts = input.split('/');
+        if (parts.length !== 2) {
+          return ctx.reply(
+            '❌ Invalid repository format. Use one of:\n' +
+            '• /watch owner/repo\n' +
+            '• /watch https://github.com/owner/repo'
+          );
+        }
+        owner = parts[0];
+        repo = parts[1];
+      }
+
+      // Clean up repo name (remove .git suffix if present)
+      repo = repo.replace(/\.git$/, '');
+
       if (!owner || !repo) {
-        return ctx.reply('❌ Invalid repository format. Use: owner/repo');
+        return ctx.reply('❌ Invalid repository format. Please check the owner and repo name.');
       }
 
       // Check if already watching
@@ -48,7 +77,7 @@ export function registerWatchCommand(bot: Telegraf) {
         });
       }
 
-      // Verify repo exists and user has access
+      // Verify repo exists and get repo data
       const repoResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}`, {
         headers: {
           'Authorization': `Bearer ${user.githubToken}`,
@@ -57,42 +86,67 @@ export function registerWatchCommand(bot: Telegraf) {
       });
 
       if (!repoResponse.ok) {
-        return ctx.reply('❌ Repository not found or you don\'t have access.');
+        if (repoResponse.status === 404) {
+          return ctx.reply('❌ Repository not found or is private. GitWatch only supports public repositories.');
+        }
+        return ctx.reply('❌ Failed to access repository. Please try again.');
       }
 
       const repoData = await repoResponse.json();
 
-      // Create webhook
-      const webhookUrl = `${process.env.NEXT_PUBLIC_APP_URL}/api/webhooks/github`;
-      const webhookResponse = await fetch(
-        `https://api.github.com/repos/${owner}/${repo}/hooks`,
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${user.githubToken}`,
-            'Accept': 'application/vnd.github.v3+json',
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            name: 'web',
-            active: true,
-            events: ['issues', 'pull_request', 'push', 'issue_comment'],
-            config: {
-              url: webhookUrl,
-              content_type: 'json',
-              secret: process.env.GITHUB_WEBHOOK_SECRET,
-            },
-          }),
-        }
-      );
-
-      if (!webhookResponse.ok) {
-        const error = await webhookResponse.json();
-        console.error('Webhook creation failed:', error);
-        return ctx.reply('❌ Failed to create webhook. Make sure you have admin access.');
+      // Check if repo is private
+      if (repoData.private) {
+        return ctx.reply('❌ This is a private repository. GitWatch only supports watching public repositories.');
       }
 
-      const webhook = await webhookResponse.json();
+      // Check if user has admin/push access (required for webhooks)
+      const hasAdminAccess = repoData.permissions?.admin || repoData.permissions?.push;
+
+      let webhookId: bigint | null = null;
+      let watchMode: 'webhook' | 'polling' = 'polling';
+
+      if (hasAdminAccess) {
+        // Try to create webhook for repos with admin access
+        try {
+          const webhookUrl = `${process.env.NEXT_PUBLIC_APP_URL}/api/webhooks/github`;
+          const webhookResponse = await fetch(
+            `https://api.github.com/repos/${owner}/${repo}/hooks`,
+            {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${user.githubToken}`,
+                'Accept': 'application/vnd.github.v3+json',
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                name: 'web',
+                active: true,
+                events: ['issues', 'pull_request', 'push', 'issue_comment'],
+                config: {
+                  url: webhookUrl,
+                  content_type: 'json',
+                  secret: process.env.GITHUB_WEBHOOK_SECRET,
+                },
+              }),
+            }
+          );
+
+          if (webhookResponse.ok) {
+            const webhook = await webhookResponse.json();
+            webhookId = BigInt(webhook.id);
+            watchMode = 'webhook';
+          } else {
+            console.log(`Webhook creation failed for ${owner}/${repo}, falling back to polling`);
+          }
+        } catch (error) {
+          console.error('Error creating webhook:', error);
+          // Fall back to polling mode
+        }
+      } else {
+        // User doesn't have admin access - use polling mode
+        console.log(`User lacks admin access for ${owner}/${repo}, using polling mode`);
+      }
+
 
       // Save to database
       await prisma.watchedRepo.create({
@@ -100,22 +154,39 @@ export function registerWatchCommand(bot: Telegraf) {
           userId: user.id,
           owner,
           repo,
-          webhookId: BigInt(webhook.id),
+          webhookId,
+          watchMode,
           active: true,
         },
       });
 
-      await ctx.reply(
-        `✅ Now watching **${owner}/${repo}**!\n\n` +
-        `⭐️ Stars: ${repoData.stargazers_count}\n` +
-        `📝 Description: ${repoData.description || 'N/A'}\n\n` +
-        `You'll receive notifications for:\n` +
-        `• Issues\n` +
-        `• Pull Requests\n` +
-        `• Pushes\n` +
-        `• Comments`,
-        { parse_mode: 'Markdown' }
-      );
+      // Send appropriate success message based on watch mode
+      if (watchMode === 'webhook') {
+        await ctx.reply(
+          `✅ Now watching **${owner}/${repo}** (Real-time mode)!\n\n` +
+          `⭐️ Stars: ${repoData.stargazers_count}\n` +
+          `📝 Description: ${repoData.description || 'N/A'}\n\n` +
+          `You'll receive instant notifications for:\n` +
+          `• Issues\n` +
+          `• Pull Requests\n` +
+          `• Pushes\n` +
+          `• Comments`,
+          { parse_mode: 'Markdown' }
+        );
+      } else {
+        await ctx.reply(
+          `✅ Now watching **${owner}/${repo}** (Polling mode)!\n\n` +
+          `⭐️ Stars: ${repoData.stargazers_count}\n` +
+          `📝 Description: ${repoData.description || 'N/A'}\n\n` +
+          `You'll receive notifications for:\n` +
+          `• Issues\n` +
+          `• Pull Requests\n` +
+          `• Pushes\n` +
+          `• Comments\n\n` +
+          `💡 Updates checked every 5-10 minutes for public repos.`,
+          { parse_mode: 'Markdown' }
+        );
+      }
     } catch (error) {
       console.error('Error watching repo:', error);
       await ctx.reply('❌ An error occurred. Please try again.');

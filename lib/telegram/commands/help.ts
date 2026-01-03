@@ -7,9 +7,7 @@ export function registerHelpCommand(bot: Telegraf) {
 
 📊 **Repository Management**
 /watch \`owner/repo\` - Watch a repository
-/unwat
-
-ch \`owner/repo\` - Stop watching
+/unwatch \`owner/repo\` - Stop watching
 /watchlist - View all watched repos
 
 🔗 **Account**

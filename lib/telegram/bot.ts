@@ -2,6 +2,7 @@ import { Telegraf } from "telegraf";
 import { registerWatchCommand } from "./commands/watch";
 import { registerHelpCommand } from "./commands/help";
 import { registerWatchlistCommand } from "./commands/watchlist";
+import { registerDisconnectCommand } from "./commands/disconnect";
 import { prisma } from "../prisma";
 import dotenv from "dotenv";
 
@@ -41,6 +42,16 @@ bot.start(async (ctx) => {
 registerWatchCommand(bot);
 registerHelpCommand(bot);
 registerWatchlistCommand(bot);
+registerDisconnectCommand(bot);
+
+// Set bot commands for UI suggestions
+bot.telegram.setMyCommands([
+  { command: 'start', description: 'Connect your GitHub account' },
+  { command: 'watch', description: 'Watch a repository' },
+  { command: 'watchlist', description: 'View all watched repositories' },
+  { command: 'disconnect', description: 'Disconnect GitHub and remove all watches' },
+  { command: 'help', description: 'Show help message' },
+]);
 
 bot.launch();
 
