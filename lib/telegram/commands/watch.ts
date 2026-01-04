@@ -61,7 +61,7 @@ export function registerWatchCommand(bot: Telegraf) {
       }
 
       // Send immediate acknowledgment
-      const processingMsg = await ctx.reply(`⏳ Processing **${owner}/${repo}**...`, {
+      const processingMsg = await ctx.reply(`Processing **${owner}/${repo}**...`, {
         parse_mode: 'Markdown',
       });
 
@@ -82,11 +82,11 @@ export function registerWatchCommand(bot: Telegraf) {
             ctx.chat!.id,
             processingMsg.message_id,
             undefined,
-            `✅ You're already watching **${owner}/${repo}**!`,
+            `**Already watching ${owner}/${repo}**`,
             {
               parse_mode: 'Markdown',
               ...Markup.inlineKeyboard([
-                [Markup.button.callback('⚙️ Manage Notifications', `manage:${existing.id}`)]
+                [Markup.button.callback('Manage Notifications', `manage:${existing.id}`)]
               ])
             }
           );
@@ -199,9 +199,9 @@ export function registerWatchCommand(bot: Telegraf) {
         });
 
         // Send success message with preferences keyboard
-        const modeIcon = watchMode === 'webhook' ? '⚡ Real-time' : '🔄 Polling';
-        const message = `✅ Now watching **${owner}/${repo}** (${modeIcon})!\n\n` +
-                        `What would you like to get notified for? (Tap to toggle)`;
+        const modeText = watchMode === 'webhook' ? 'Real-time' : 'Polling';
+        const message = `**Now watching ${owner}/${repo}** (${modeText})\n\n` +
+                        `Select notification preferences below:`;
 
         await ctx.telegram.editMessageText(
           ctx.chat!.id,
@@ -220,12 +220,12 @@ export function registerWatchCommand(bot: Telegraf) {
           ctx.chat!.id,
           processingMsg.message_id,
           undefined,
-          '❌ An error occurred. Please try again.'
+          'An error occurred. Please try again.'
         );
       }
     } catch (error) {
       console.error('Error watching repo:', error);
-      await ctx.reply('❌ An error occurred. Please try again.');
+      await ctx.reply('An error occurred. Please try again.');
     }
   });
 
@@ -239,7 +239,7 @@ export function registerWatchCommand(bot: Telegraf) {
       });
 
       if (!repo) {
-        return ctx.answerCbQuery('❌ Repository not found.');
+        return ctx.answerCbQuery('Repository not found');
       }
 
       // Update preference
@@ -263,7 +263,7 @@ export function registerWatchCommand(bot: Telegraf) {
 
     } catch (error) {
       console.error('Error toggling preference:', error);
-      await ctx.answerCbQuery('❌ Failed to update preference.');
+      await ctx.answerCbQuery('Failed to update preference');
     }
   });
 
@@ -276,11 +276,11 @@ export function registerWatchCommand(bot: Telegraf) {
       });
 
       if (!repo) {
-        return ctx.answerCbQuery('❌ Repository not found.');
+        return ctx.answerCbQuery('Repository not found');
       }
 
       await ctx.editMessageText(
-        `⚙️ **Notification Preferences** for **${repo.owner}/${repo.repo}**\n\nTap to toggle:`,
+        `**Notification Preferences**\nRepo: ${repo.owner}/${repo.repo}\n\nSelect to toggle:`,
         {
           parse_mode: 'Markdown',
           ...getPreferencesKeyboard(repo)
@@ -288,7 +288,7 @@ export function registerWatchCommand(bot: Telegraf) {
       );
     } catch (error) {
       console.error('Error opening management menu:', error);
-      await ctx.answerCbQuery('❌ Failed to open settings.');
+      await ctx.answerCbQuery('Failed to open settings');
     }
   });
 }

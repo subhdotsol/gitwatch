@@ -32,16 +32,16 @@ export function registerWatchlistCommand(bot: Telegraf) {
       }
 
       // Build watchlist message
-      let message = `📋 **Your Watchlist** (${user.watchedRepos.length} repos)\n\n`;
+      let message = `**Your Watchlist** (${user.watchedRepos.length} repositories)\n\n`;
 
       user.watchedRepos.forEach((repo, index) => {
-        const modeIcon = repo.watchMode === 'webhook' ? '⚡' : '🔄';
         const modeText = repo.watchMode === 'webhook' ? 'Real-time' : 'Polling';
-        message += `${index + 1}. **${repo.owner}/${repo.repo}** ${modeIcon} ${modeText}\n`;
-        message += `   Added: ${repo.createdAt.toLocaleDateString()}\n\n`;
+        message += `${index + 1}. **${repo.owner}/${repo.repo}**\n`;
+        message += `Mode: ${modeText}\n`;
+        message += `Added: ${repo.createdAt.toLocaleDateString()}\n\n`;
       });
 
-      message += `💡 Use \`/unwatch owner/repo\` to stop watching a repository.`;
+      message += `Use \`/unwatch owner/repo\` to stop watching a repository.`;
 
       await ctx.reply(message, { parse_mode: 'Markdown' });
     } catch (error) {

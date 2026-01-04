@@ -157,10 +157,11 @@ function formatEventMessage(event: any, owner: string, repo: string): string | n
       const issueAction = event.payload.action;
       if (issueAction !== 'opened' && issueAction !== 'closed') return null;
       
-      const issueStatus = issueAction === 'opened' ? '🔔 New Issue' : '✅ Issue Closed';
+      const issueStatus = issueAction === 'opened' ? 'New Issue' : 'Issue Closed';
       return (
-        `**${issueStatus} in ${owner}/${repo}**\n\n` +
-        `**${issue.title}**\n` +
+        `**${issueStatus}**\n` +
+        `Repo: ${owner}/${repo}\n` +
+        `Issue: ${issue.title}\n` +
         `By: @${actor}\n\n` +
         `[View Issue](${issue.html_url})`
       );
@@ -170,16 +171,15 @@ function formatEventMessage(event: any, owner: string, repo: string): string | n
       const prAction = event.payload.action;
       if (prAction !== 'opened' && prAction !== 'closed') return null;
 
-      let prStatus = '🔌 New PR';
-      let prIcon = '🔌';
+      let prStatus = 'New Pull Request';
       if (prAction === 'closed') {
-        prStatus = pr.merged ? '🟣 PR Merged' : '🛑 PR Closed';
-        prIcon = pr.merged ? '🟣' : '🛑';
+        prStatus = pr.merged ? 'PR Merged' : 'PR Closed';
       }
 
       return (
-        `**${prStatus} in ${owner}/${repo}**\n\n` +
-        `**${pr.title}**\n` +
+        `**${prStatus}**\n` +
+        `Repo: ${owner}/${repo}\n` +
+        `PR: ${pr.title}\n` +
         `By: @${actor}\n\n` +
         `[View PR](${pr.html_url})`
       );
@@ -191,7 +191,8 @@ function formatEventMessage(event: any, owner: string, repo: string): string | n
       
       const commitText = commitCount === 1 ? '1 new commit' : `${commitCount} new commits`;
       return (
-        `🔨 **New Push to ${owner}/${repo}**\n\n` +
+        `**New Push**\n` +
+        `Repo: ${owner}/${repo}\n` +
         `Branch: \`${branch}\`\n` +
         `${commitText} by @${actor}\n\n` +
         `[View Changes](https://github.com/${owner}/${repo}/compare/${event.payload.before}...${event.payload.head})`
@@ -204,8 +205,9 @@ function formatEventMessage(event: any, owner: string, repo: string): string | n
       const type = !!commentIssue.pull_request ? 'PR' : 'Issue';
       
       return (
-        `💬 **New Comment on ${type} in ${owner}/${repo}**\n\n` +
-        `**${commentIssue.title}**\n` +
+        `**New Comment (${type})**\n` +
+        `Repo: ${owner}/${repo}\n` +
+        `On: ${commentIssue.title}\n` +
         `By: @${actor}\n\n` +
         `[View Comment](${comment.html_url})`
       );

@@ -65,13 +65,15 @@ export async function POST(req: NextRequest) {
         const action = data.action;
         const issue = data.issue;
         if (action === 'opened') {
-          message = `🔔 **New Issue in ${owner}/${repo}**\n\n` +
-                    `**${issue.title}**\n` +
+          message = `**New Issue**\n` +
+                    `Repo: ${owner}/${repo}\n` +
+                    `Issue: ${issue.title}\n` +
                     `By: @${actor}\n\n` +
                     `[View Issue](${issue.html_url})`;
         } else if (action === 'closed') {
-          message = `✅ **Issue Closed in ${owner}/${repo}**\n\n` +
-                    `**${issue.title}**\n` +
+          message = `**Issue Closed**\n` +
+                    `Repo: ${owner}/${repo}\n` +
+                    `Issue: ${issue.title}\n` +
                     `By: @${actor}\n\n` +
                     `[View Issue](${issue.html_url})`;
         }
@@ -80,15 +82,16 @@ export async function POST(req: NextRequest) {
         const action = data.action;
         const pr = data.pull_request;
         if (action === 'opened') {
-          message = `🔌 **New PR in ${owner}/${repo}**\n\n` +
-                    `**${pr.title}**\n` +
+          message = `**New Pull Request**\n` +
+                    `Repo: ${owner}/${repo}\n` +
+                    `PR: ${pr.title}\n` +
                     `By: @${actor}\n\n` +
                     `[View PR](${pr.html_url})`;
         } else if (action === 'closed') {
           const status = pr.merged ? 'Merged' : 'Closed';
-          const icon = pr.merged ? '🟣' : '🛑';
-          message = `${icon} **PR ${status} in ${owner}/${repo}**\n\n` +
-                    `**${pr.title}**\n` +
+          message = `**PR ${status}**\n` +
+                    `Repo: ${owner}/${repo}\n` +
+                    `PR: ${pr.title}\n` +
                     `By: @${actor}\n\n` +
                     `[View PR](${pr.html_url})`;
         }
@@ -98,7 +101,8 @@ export async function POST(req: NextRequest) {
         if (commits.length > 0) {
           const branch = data.ref.replace('refs/heads/', '');
           const commitText = commits.length === 1 ? '1 new commit' : `${commits.length} new commits`;
-          message = `🔨 **New Push to ${owner}/${repo}**\n\n` +
+          message = `**New Push**\n` +
+                    `Repo: ${owner}/${repo}\n` +
                     `Branch: \`${branch}\`\n` +
                     `${commitText} by @${actor}\n\n` +
                     `[View Changes](${data.compare})`;
@@ -110,8 +114,9 @@ export async function POST(req: NextRequest) {
           const comment = data.comment;
           const isPR = !!data.issue.pull_request;
           const type = isPR ? 'PR' : 'Issue';
-          message = `💬 **New Comment on ${type} in ${owner}/${repo}**\n\n` +
-                    `**${data.issue.title}**\n` +
+          message = `**New Comment (${type})**\n` +
+                    `Repo: ${owner}/${repo}\n` +
+                    `On: ${data.issue.title}\n` +
                     `By: @${actor}\n\n` +
                     `[View Comment](${comment.html_url})`;
         }

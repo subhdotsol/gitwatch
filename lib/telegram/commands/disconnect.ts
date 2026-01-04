@@ -55,11 +55,11 @@ export function registerDisconnectCommand(bot: Telegraf) {
       });
 
       await ctx.reply(
-        '✅ **Successfully disconnected!**\n\n' +
-        `• GitHub connection removed\n` +
-        `• ${user.watchedRepos.length} watched ${user.watchedRepos.length === 1 ? 'repository' : 'repositories'} removed\n` +
-        `• All webhooks deleted\n\n` +
-        'Use /start anytime to reconnect your GitHub account.',
+        `**Successfully disconnected**\n\n` +
+        `- GitHub connection removed\n` +
+        `- ${user.watchedRepos.length} watched ${user.watchedRepos.length === 1 ? 'repository' : 'repositories'} removed\n` +
+        `- All webhooks deleted\n\n` +
+        `Use /start to reconnect your account.`,
         { parse_mode: 'Markdown' }
       );
     } catch (error) {

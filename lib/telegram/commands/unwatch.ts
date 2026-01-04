@@ -95,7 +95,7 @@ export function registerUnwatchCommand(bot: Telegraf) {
       });
 
       await ctx.reply(
-        `✅ Stopped watching **${owner}/${repo}**!`,
+        `**Stopped watching ${owner}/${repo}**`,
         { parse_mode: 'Markdown' }
       );
     } catch (error) {
