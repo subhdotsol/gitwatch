@@ -94,8 +94,11 @@ export function registerUnwatchCommand(bot: Telegraf) {
         },
       });
 
+      // Escape underscores for Markdown
+      const esc = (text: string) => text.replace(/_/g, '\\_');
+
       await ctx.reply(
-        `**Stopped watching ${owner}/${repo}**`,
+        `**Stopped watching ${esc(owner)}/${esc(repo)}**`,
         { parse_mode: 'Markdown' }
       );
     } catch (error) {

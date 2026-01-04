@@ -60,8 +60,11 @@ export function registerWatchCommand(bot: Telegraf) {
         return ctx.reply('❌ Invalid repository format. Please check the owner and repo name.');
       }
 
+      // Escape underscores for Markdown
+      const esc = (text: string) => text.replace(/_/g, '\\_');
+
       // Send immediate acknowledgment
-      const processingMsg = await ctx.reply(`Processing **${owner}/${repo}**...`, {
+      const processingMsg = await ctx.reply(`Processing **${esc(owner)}/${esc(repo)}**...`, {
         parse_mode: 'Markdown',
       });
 
@@ -82,7 +85,7 @@ export function registerWatchCommand(bot: Telegraf) {
             ctx.chat!.id,
             processingMsg.message_id,
             undefined,
-            `**Already watching ${owner}/${repo}**`,
+            `**Already watching ${esc(owner)}/${esc(repo)}**`,
             {
               parse_mode: 'Markdown',
               ...Markup.inlineKeyboard([
@@ -200,7 +203,7 @@ export function registerWatchCommand(bot: Telegraf) {
 
         // Send success message with preferences keyboard
         const modeText = watchMode === 'webhook' ? 'Real-time' : 'Polling';
-        const message = `**Now watching ${owner}/${repo}** (${modeText})\n\n` +
+        const message = `**Now watching ${esc(owner)}/${esc(repo)}** (${modeText})\n\n` +
                         `Select notification preferences below:`;
 
         await ctx.telegram.editMessageText(
@@ -280,7 +283,7 @@ export function registerWatchCommand(bot: Telegraf) {
       }
 
       await ctx.editMessageText(
-        `**Notification Preferences**\nRepo: ${repo.owner}/${repo.repo}\n\nSelect to toggle:`,
+        `**Notification Preferences**\nRepo: ${repo.owner.replace(/_/g, '\\_')}/${repo.repo.replace(/_/g, '\\_')}\n\nSelect to toggle:`,
         {
           parse_mode: 'Markdown',
           ...getPreferencesKeyboard(repo)

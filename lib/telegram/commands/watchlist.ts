@@ -36,7 +36,9 @@ export function registerWatchlistCommand(bot: Telegraf) {
 
       user.watchedRepos.forEach((repo, index) => {
         const modeText = repo.watchMode === 'webhook' ? 'Real-time' : 'Polling';
-        message += `${index + 1}. **${repo.owner}/${repo.repo}**\n`;
+        // Escape underscores for Markdown
+        const esc = (text: string) => text.replace(/_/g, '\\_');
+        message += `${index + 1}. **${esc(repo.owner)}/${esc(repo.repo)}**\n`;
         message += `Mode: ${modeText}\n`;
         message += `Added: ${repo.createdAt.toLocaleDateString()}\n\n`;
       });
