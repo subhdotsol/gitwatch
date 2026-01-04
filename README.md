@@ -8,7 +8,8 @@
 
 [![Next.js](https://img.shields.io/badge/Next.js-16.1-black?style=flat-square&logo=next.js)](https://nextjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?style=flat-square&logo=typescript)](https://www.typescriptlang.org/)
-[![Telegram Bot](https://img.shields.io/badge/Telegram-Bot-26A5E4?style=flat-square&logo=telegram)](https://core.telegram.org/bots)
+[![Telegram Bot](https://img.shields.io/badge/Telegram-Bot-26A5E4?style=flat-square&logo=telegram)](https://t.me/Gitwtch_bot)
+[![Try It Now](https://img.shields.io/badge/Try_It-Now-green?style=for-the-badge)](https://t.me/Gitwtch_bot)
 
 ---
 
@@ -489,7 +490,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - **Issues:** [GitHub Issues](https://github.com/yourusername/gitwatch/issues)
 - **Discussions:** [GitHub Discussions](https://github.com/yourusername/gitwatch/discussions)
-- **Telegram:** [@gitwatch_support](https://t.me/gitwatch_support) (coming soon)
+- **Telegram:** [@Gitwtch_bot](https://t.me/Gitwtch_bot)
 
 ---
 

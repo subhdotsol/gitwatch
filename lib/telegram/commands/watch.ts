@@ -223,9 +223,9 @@ export function registerWatchCommand(bot: Telegraf) {
           'An error occurred. Please try again.'
         );
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error watching repo:', error);
-      await ctx.reply('An error occurred. Please try again.');
+      await ctx.reply(`An error occurred: ${error.message || 'Unknown error'}. Please try again.`);
     }
   });
 

@@ -14,8 +14,12 @@ bot.start(async (ctx) => {
   const { prisma } = await import('../../../../../lib/prisma');
   const telegramId = BigInt(ctx.from?.id);
   const username = ctx.from?.username || ctx.from?.first_name;
+  
+  // Check for deep link parameters
+  // Telegram format: /start payload
+  const payload = ctx.message.text.split(' ')[1];
 
-  await prisma.user.upsert({
+  const user = await prisma.user.upsert({
     where: { telegramId },
     update: { telegramUsername: username },
     create: {
@@ -27,6 +31,18 @@ bot.start(async (ctx) => {
   // Remove trailing slash from app URL
   const appUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, '') || '';
   const authUrl = `${appUrl}/api/auth/github?telegram_id=${telegramId}`;
+
+  if (payload === 'connected') {
+    if (user.githubUsername) {
+      await ctx.reply(
+        `**Welcome back, ${username}**\n\n` +
+        `✅ Your GitHub account (**${user.githubUsername}**) is connected.\n\n` +
+        `Use \`/watch owner/repo\` to start tracking repositories!`,
+        { parse_mode: 'Markdown' }
+      );
+      return;
+    }
+  }
   
   await ctx.reply(
     `**Welcome to GitWatch**, ${username}\n\n` +
