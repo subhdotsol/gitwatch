@@ -150,6 +150,10 @@ function shouldNotify(event: any, watchedRepo: any): boolean {
 // Format GitHub event into a readable Telegram message
 function formatEventMessage(event: any, owner: string, repo: string, currentUser?: string): string | null {
   const actor = event.actor?.login || 'Someone';
+  const esc = (text: string) => text ? text.replace(/_/g, '\\_') : '';
+
+  const safeOwner = esc(owner);
+  const safeRepo = esc(repo);
 
   switch (event.type) {
     case 'IssuesEvent':
@@ -159,19 +163,19 @@ function formatEventMessage(event: any, owner: string, repo: string, currentUser
         const issueStatus = issueAction === 'opened' ? 'New Issue' : 'Issue Closed';
         return (
           `**${issueStatus}**\n` +
-          `Repo: ${owner}/${repo}\n` +
-          `Issue: ${issue.title}\n` +
-          `By: @${actor}\n\n` +
+          `Repo: ${safeOwner}/${safeRepo}\n` +
+          `Issue: ${esc(issue.title)}\n` +
+          `By: @${esc(actor)}\n\n` +
           `[View Issue](${issue.html_url})`
         );
       } else if (issueAction === 'assigned') {
         const assignee = event.payload.assignee.login;
-        const target = currentUser === assignee ? 'You have' : `@${assignee} has`;
+        const target = currentUser === assignee ? 'You have' : `@${esc(assignee)} has`;
         return (
           `**Issue Assigned**\n` +
-          `Repo: ${owner}/${repo}\n` +
-          `Issue: ${issue.title}\n` +
-          `${target} been assigned by @${actor}\n\n` +
+          `Repo: ${safeOwner}/${safeRepo}\n` +
+          `Issue: ${esc(issue.title)}\n` +
+          `${target} been assigned by @${esc(actor)}\n\n` +
           `[View Issue](${issue.html_url})`
         );
       }
@@ -188,35 +192,38 @@ function formatEventMessage(event: any, owner: string, repo: string, currentUser
 
         return (
           `**${prStatus}**\n` +
-          `Repo: ${owner}/${repo}\n` +
-          `PR: ${pr.title}\n` +
-          `By: @${actor}\n\n` +
+          `Repo: ${safeOwner}/${safeRepo}\n` +
+          `PR: ${esc(pr.title)}\n` +
+          `By: @${esc(actor)}\n\n` +
           `[View PR](${pr.html_url})`
         );
       } else if (prAction === 'assigned') {
         const assignee = event.payload.assignee.login;
-        const target = currentUser === assignee ? 'You have' : `@${assignee} has`;
+        const target = currentUser === assignee ? 'You have' : `@${esc(assignee)} has`;
         return (
           `**PR Assigned**\n` +
-          `Repo: ${owner}/${repo}\n` +
-          `PR: ${pr.title}\n` +
-          `${target} been assigned by @${actor}\n\n` +
+          `Repo: ${safeOwner}/${safeRepo}\n` +
+          `PR: ${esc(pr.title)}\n` +
+          `${target} been assigned by @${esc(actor)}\n\n` +
           `[View PR](${pr.html_url})`
         );
       }
       return null;
 
     case 'PushEvent':
-      const branch = event.payload.ref.replace('refs/heads/', '');
-      const commitCount = event.payload.size || 0;
-      if (commitCount === 0) return null;
+      const branch = event.payload.ref ? event.payload.ref.replace('refs/heads/', '') : 'unknown';
+      // GitHub API sometimes returns size: 0 but has commits in the payload
+      const commitCount = event.payload.size ?? event.payload.commits?.length ?? 0;
       
+      // If we still show 0 commits but there's a push, it might be a force push or empty commit
+      // We'll show it anyway to be safe, but label it appropriately
       const commitText = commitCount === 1 ? '1 new commit' : `${commitCount} new commits`;
+      
       return (
         `**New Push**\n` +
-        `Repo: ${owner}/${repo}\n` +
-        `Branch: \`${branch}\`\n` +
-        `${commitText} by @${actor}\n\n` +
+        `Repo: ${safeOwner}/${safeRepo}\n` +
+        `Branch: \`${esc(branch)}\`\n` +
+        `${commitText} by @${esc(actor)}\n\n` +
         `[View Changes](https://github.com/${owner}/${repo}/compare/${event.payload.before}...${event.payload.head})`
       );
 
@@ -228,9 +235,9 @@ function formatEventMessage(event: any, owner: string, repo: string, currentUser
       
       return (
         `**New Comment (${type})**\n` +
-        `Repo: ${owner}/${repo}\n` +
-        `On: ${commentIssue.title}\n` +
-        `By: @${actor}\n\n` +
+        `Repo: ${safeOwner}/${safeRepo}\n` +
+        `On: ${esc(commentIssue.title)}\n` +
+        `By: @${esc(actor)}\n\n` +
         `[View Comment](${comment.html_url})`
       );
 
