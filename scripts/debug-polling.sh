@@ -7,7 +7,8 @@ echo "=============================="
 echo ""
 
 # Get CRON_SECRET
-source .env 2>/dev/null || source .env.local 2>/dev/null
+source .env 2>/dev/null
+source .env.local 2>/dev/null
 
 if [ -z "$CRON_SECRET" ]; then
   echo "❌ CRON_SECRET not found"
