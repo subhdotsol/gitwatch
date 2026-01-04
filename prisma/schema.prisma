@@ -23,16 +23,20 @@ model User {
 }
 
 model WatchedRepo {
-  id         String    @id @default(cuid())
-  userId     String
-  owner      String
-  repo       String
-  webhookId  BigInt?
-  watchMode  WatchMode @default(webhook)
-  lastPolled DateTime?
-  active     Boolean   @default(true)
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
+  id             String    @id @default(cuid())
+  userId         String
+  owner          String
+  repo           String
+  webhookId      BigInt?
+  watchMode      WatchMode @default(webhook)
+  lastPolled     DateTime?
+  active         Boolean   @default(true)
+  notifyIssues   Boolean   @default(true)
+  notifyPRs      Boolean   @default(true)
+  notifyCommits  Boolean   @default(true)
+  notifyComments Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 

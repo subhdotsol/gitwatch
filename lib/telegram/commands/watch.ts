@@ -1,4 +1,4 @@
-import { Telegraf } from 'telegraf';
+import { Telegraf, Markup } from 'telegraf';
 import { prisma } from '../../prisma';
 
 export function registerWatchCommand(bot: Telegraf) {
@@ -83,7 +83,12 @@ export function registerWatchCommand(bot: Telegraf) {
             processingMsg.message_id,
             undefined,
             `✅ You're already watching **${owner}/${repo}**!`,
-            { parse_mode: 'Markdown' }
+            {
+              parse_mode: 'Markdown',
+              ...Markup.inlineKeyboard([
+                [Markup.button.callback('⚙️ Manage Notifications', `manage:${existing.id}`)]
+              ])
+            }
           );
           return;
         }
@@ -178,7 +183,7 @@ export function registerWatchCommand(bot: Telegraf) {
 
 
         // Save to database
-        await prisma.watchedRepo.create({
+        const watchedRepo = await prisma.watchedRepo.create({
           data: {
             userId: user.id,
             owner,
@@ -186,42 +191,29 @@ export function registerWatchCommand(bot: Telegraf) {
             webhookId,
             watchMode,
             active: true,
+            notifyIssues: true,
+            notifyPRs: true,
+            notifyCommits: true,
+            notifyComments: true,
           },
         });
 
-        // Send appropriate success message based on watch mode
-        if (watchMode === 'webhook') {
-          await ctx.telegram.editMessageText(
-            ctx.chat!.id,
-            processingMsg.message_id,
-            undefined,
-            `✅ Now watching **${owner}/${repo}** (Real-time mode)!\n\n` +
-            `⭐️ Stars: ${repoData.stargazers_count}\n` +
-            `📝 Description: ${repoData.description || 'N/A'}\n\n` +
-            `You'll receive instant notifications for:\n` +
-            `• Issues\n` +
-            `• Pull Requests\n` +
-            `• Pushes\n` +
-            `• Comments`,
-            { parse_mode: 'Markdown' }
-          );
-        } else {
-          await ctx.telegram.editMessageText(
-            ctx.chat!.id,
-            processingMsg.message_id,
-            undefined,
-            `✅ Now watching **${owner}/${repo}** (Polling mode)!\n\n` +
-            `⭐️ Stars: ${repoData.stargazers_count}\n` +
-            `📝 Description: ${repoData.description || 'N/A'}\n\n` +
-            `You'll receive notifications for:\n` +
-            `• Issues\n` +
-            `• Pull Requests\n` +
-            `• Pushes\n` +
-            `• Comments\n\n` +
-            `💡 Updates checked every 2 minutes.`,
-            { parse_mode: 'Markdown' }
-          );
-        }
+        // Send success message with preferences keyboard
+        const modeIcon = watchMode === 'webhook' ? '⚡ Real-time' : '🔄 Polling';
+        const message = `✅ Now watching **${owner}/${repo}** (${modeIcon})!\n\n` +
+                        `What would you like to get notified for? (Tap to toggle)`;
+
+        await ctx.telegram.editMessageText(
+          ctx.chat!.id,
+          processingMsg.message_id,
+          undefined,
+          message,
+          {
+            parse_mode: 'Markdown',
+            ...getPreferencesKeyboard(watchedRepo)
+          }
+        );
+
       } catch (error) {
         console.error('Error watching repo:', error);
         await ctx.telegram.editMessageText(
@@ -236,4 +228,80 @@ export function registerWatchCommand(bot: Telegraf) {
       await ctx.reply('❌ An error occurred. Please try again.');
     }
   });
+
+  // Handle preference toggles
+  bot.action(/^notify:(issues|prs|commits|comments):(.+)$/, async (ctx) => {
+    const [, type, repoId] = ctx.match;
+    
+    try {
+      const repo = await prisma.watchedRepo.findUnique({
+        where: { id: repoId },
+      });
+
+      if (!repo) {
+        return ctx.answerCbQuery('❌ Repository not found.');
+      }
+
+      // Update preference
+      const updateData: any = {};
+      const field = `notify${type.charAt(0).toUpperCase() + type.slice(1).replace('prs', 'PRs')}` as any;
+      // Special case for PRs because of naming
+      const finalField = type === 'prs' ? 'notifyPRs' : field;
+      
+      updateData[finalField] = !repo[finalField as keyof typeof repo];
+
+      const updated = await prisma.watchedRepo.update({
+        where: { id: repoId },
+        data: updateData,
+      });
+
+      // Update message with new keyboard
+      await ctx.editMessageReplyMarkup(getPreferencesKeyboard(updated).reply_markup);
+      
+      const status = updated[finalField as keyof typeof updated] ? 'Enabled' : 'Disabled';
+      await ctx.answerCbQuery(`${type.charAt(0).toUpperCase() + type.slice(1)} notifications ${status}`);
+
+    } catch (error) {
+      console.error('Error toggling preference:', error);
+      await ctx.answerCbQuery('❌ Failed to update preference.');
+    }
+  });
+
+  // Handle manage button from existing repo
+  bot.action(/^manage:(.+)$/, async (ctx) => {
+    const repoId = ctx.match[1];
+    try {
+      const repo = await prisma.watchedRepo.findUnique({
+        where: { id: repoId },
+      });
+
+      if (!repo) {
+        return ctx.answerCbQuery('❌ Repository not found.');
+      }
+
+      await ctx.editMessageText(
+        `⚙️ **Notification Preferences** for **${repo.owner}/${repo.repo}**\n\nTap to toggle:`,
+        {
+          parse_mode: 'Markdown',
+          ...getPreferencesKeyboard(repo)
+        }
+      );
+    } catch (error) {
+      console.error('Error opening management menu:', error);
+      await ctx.answerCbQuery('❌ Failed to open settings.');
+    }
+  });
+}
+
+function getPreferencesKeyboard(repo: any) {
+  return Markup.inlineKeyboard([
+    [
+      Markup.button.callback(`${repo.notifyIssues ? '✅' : '❌'} Issues`, `notify:issues:${repo.id}`),
+      Markup.button.callback(`${repo.notifyPRs ? '✅' : '❌'} PRs`, `notify:prs:${repo.id}`)
+    ],
+    [
+      Markup.button.callback(`${repo.notifyCommits ? '✅' : '❌'} Commits`, `notify:commits:${repo.id}`),
+      Markup.button.callback(`${repo.notifyComments ? '✅' : '❌'} Comments`, `notify:comments:${repo.id}`)
+    ]
+  ]);
 }

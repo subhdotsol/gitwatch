@@ -75,15 +75,19 @@ export async function GET(request: Request) {
         // Filter events that happened after lastPolled
         const newEvents = events.filter((event: any) => {
           const eventDate = new Date(event.created_at);
-          const isNew = eventDate > since;
-          console.log(`  Event: ${event.type} at ${event.created_at} - ${isNew ? 'NEW' : 'OLD'}`);
-          return isNew;
+          return eventDate > since;
         });
 
         console.log(`[${owner}/${repo}] ${newEvents.length} new events to notify`);
 
         // Send notifications for new events
         for (const event of newEvents) {
+          // Check if user wants this notification type
+          if (!shouldNotify(event, watchedRepo)) {
+            console.log(`  Skipping ${event.type} - disabled in preferences`);
+            continue;
+          }
+
           const message = formatEventMessage(event, owner, repo);
           if (message) {
             try {
@@ -127,56 +131,86 @@ export async function GET(request: Request) {
   }
 }
 
+// Check if user wants notification for this event type
+function shouldNotify(event: any, watchedRepo: any): boolean {
+  switch (event.type) {
+    case 'IssuesEvent':
+      return watchedRepo.notifyIssues;
+    case 'PullRequestEvent':
+      return watchedRepo.notifyPRs;
+    case 'PushEvent':
+      return watchedRepo.notifyCommits;
+    case 'IssueCommentEvent':
+      return watchedRepo.notifyComments;
+    default:
+      return false;
+  }
+}
+
 // Format GitHub event into a readable Telegram message
 function formatEventMessage(event: any, owner: string, repo: string): string | null {
-  const repoUrl = `https://github.com/${owner}/${repo}`;
   const actor = event.actor?.login || 'Someone';
 
   switch (event.type) {
     case 'IssuesEvent':
       const issue = event.payload.issue;
+      const issueAction = event.payload.action;
+      if (issueAction !== 'opened' && issueAction !== 'closed') return null;
+      
+      const issueStatus = issueAction === 'opened' ? '🔔 New Issue' : '✅ Issue Closed';
       return (
-        `🔔 **New Issue in ${owner}/${repo}**\n\n` +
+        `**${issueStatus} in ${owner}/${repo}**\n\n` +
         `**${issue.title}**\n` +
-        `By: @${actor}\n` +
-        `Action: ${event.payload.action}\n\n` +
+        `By: @${actor}\n\n` +
         `[View Issue](${issue.html_url})`
       );
 
-    // Disabled: Only notify on issues
-    // case 'PullRequestEvent':
-    //   const pr = event.payload.pull_request;
-    //   return (
-    //     `🔔 **New PR in ${owner}/${repo}**\n\n` +
-    //     `**${pr.title}**\n` +
-    //     `By: @${actor}\n` +
-    //     `Action: ${event.payload.action}\n\n` +
-    //     `[View PR](${pr.html_url})`
-    //   );
+    case 'PullRequestEvent':
+      const pr = event.payload.pull_request;
+      const prAction = event.payload.action;
+      if (prAction !== 'opened' && prAction !== 'closed') return null;
 
-    // case 'PushEvent':
-    //   const commits = event.payload.commits || [];
-    //   const commitCount = commits.length;
-    //   return (
-    //     `🔔 **New Push to ${owner}/${repo}**\n\n` +
-    //     `By: @${actor}\n` +
-    //     `Branch: ${event.payload.ref.replace('refs/heads/', '')}\n` +
-    //     `Commits: ${commitCount}\n\n` +
-    //     `[View Commits](${repoUrl}/commits)`
-    //   );
+      let prStatus = '🔌 New PR';
+      let prIcon = '🔌';
+      if (prAction === 'closed') {
+        prStatus = pr.merged ? '🟣 PR Merged' : '🛑 PR Closed';
+        prIcon = pr.merged ? '🟣' : '🛑';
+      }
 
-    // case 'IssueCommentEvent':
-    //   const comment = event.payload.comment;
-    //   const commentIssue = event.payload.issue;
-    //   return (
-    //     `🔔 **New Comment in ${owner}/${repo}**\n\n` +
-    //     `On: ${commentIssue.title}\n` +
-    //     `By: @${actor}\n\n` +
-    //     `[View Comment](${comment.html_url})`
-    //   );
+      return (
+        `**${prStatus} in ${owner}/${repo}**\n\n` +
+        `**${pr.title}**\n` +
+        `By: @${actor}\n\n` +
+        `[View PR](${pr.html_url})`
+      );
+
+    case 'PushEvent':
+      const branch = event.payload.ref.replace('refs/heads/', '');
+      const commitCount = event.payload.size || 0;
+      if (commitCount === 0) return null;
+      
+      const commitText = commitCount === 1 ? '1 new commit' : `${commitCount} new commits`;
+      return (
+        `🔨 **New Push to ${owner}/${repo}**\n\n` +
+        `Branch: \`${branch}\`\n` +
+        `${commitText} by @${actor}\n\n` +
+        `[View Changes](https://github.com/${owner}/${repo}/compare/${event.payload.before}...${event.payload.head})`
+      );
+
+    case 'IssueCommentEvent':
+      if (event.payload.action !== 'created') return null;
+      const comment = event.payload.comment;
+      const commentIssue = event.payload.issue;
+      const type = !!commentIssue.pull_request ? 'PR' : 'Issue';
+      
+      return (
+        `💬 **New Comment on ${type} in ${owner}/${repo}**\n\n` +
+        `**${commentIssue.title}**\n` +
+        `By: @${actor}\n\n` +
+        `[View Comment](${comment.html_url})`
+      );
 
     default:
-      // Ignore other event types
       return null;
   }
 }

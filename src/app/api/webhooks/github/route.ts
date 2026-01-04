@@ -29,64 +29,105 @@ export async function POST(req: NextRequest) {
 
     const event = req.headers.get('x-github-event');
     const data = JSON.parse(payload);
+    const repository = data.repository;
 
-    console.log(`Received GitHub event: ${event}`);
+    if (!repository) {
+      return NextResponse.json({ ok: true }); // Ping event or similar
+    }
 
-    if (event === 'issues') {
-      const action = data.action;
-      const issue = data.issue;
-      const repository = data.repository;
-      const owner = repository.owner.login;
-      const repo = repository.name;
+    const owner = repository.owner.login;
+    const repo = repository.name;
 
-      // Find users watching this repo
-      const watchedRepos = await prisma.watchedRepo.findMany({
-        where: {
-          owner,
-          repo,
-          active: true,
-        },
-        include: {
-          user: true,
-        },
-      });
+    console.log(`Received GitHub event: ${event} for ${owner}/${repo}`);
 
-      console.log(`Found ${watchedRepos.length} users watching ${owner}/${repo}`);
+    // Find users watching this repo
+    const watchedRepos = await prisma.watchedRepo.findMany({
+      where: {
+        owner,
+        repo,
+        active: true,
+      },
+      include: {
+        user: true,
+      },
+    });
 
-      for (const watched of watchedRepos) {
-        let message = '';
+    if (watchedRepos.length === 0) {
+      return NextResponse.json({ ok: true });
+    }
+
+    const actor = data.sender.login;
+
+    for (const watched of watchedRepos) {
+      let message = '';
+
+      if (event === 'issues' && watched.notifyIssues) {
+        const action = data.action;
+        const issue = data.issue;
         if (action === 'opened') {
           message = `🔔 **New Issue in ${owner}/${repo}**\n\n` +
                     `**${issue.title}**\n` +
-                    `By: @${data.sender.login}\n\n` +
+                    `By: @${actor}\n\n` +
                     `[View Issue](${issue.html_url})`;
         } else if (action === 'closed') {
           message = `✅ **Issue Closed in ${owner}/${repo}**\n\n` +
                     `**${issue.title}**\n` +
-                    `By: @${data.sender.login}\n\n` +
-                    `[View Issue](${issue.html_url})`;
-        } else if (action === 'reopened') {
-          message = `🔄 **Issue Reopened in ${owner}/${repo}**\n\n` +
-                    `**${issue.title}**\n` +
-                    `By: @${data.sender.login}\n\n` +
+                    `By: @${actor}\n\n` +
                     `[View Issue](${issue.html_url})`;
         }
+      } 
+      else if (event === 'pull_request' && watched.notifyPRs) {
+        const action = data.action;
+        const pr = data.pull_request;
+        if (action === 'opened') {
+          message = `🔌 **New PR in ${owner}/${repo}**\n\n` +
+                    `**${pr.title}**\n` +
+                    `By: @${actor}\n\n` +
+                    `[View PR](${pr.html_url})`;
+        } else if (action === 'closed') {
+          const status = pr.merged ? 'Merged' : 'Closed';
+          const icon = pr.merged ? '🟣' : '🛑';
+          message = `${icon} **PR ${status} in ${owner}/${repo}**\n\n` +
+                    `**${pr.title}**\n` +
+                    `By: @${actor}\n\n` +
+                    `[View PR](${pr.html_url})`;
+        }
+      }
+      else if (event === 'push' && watched.notifyCommits) {
+        const commits = data.commits || [];
+        if (commits.length > 0) {
+          const branch = data.ref.replace('refs/heads/', '');
+          const commitText = commits.length === 1 ? '1 new commit' : `${commits.length} new commits`;
+          message = `🔨 **New Push to ${owner}/${repo}**\n\n` +
+                    `Branch: \`${branch}\`\n` +
+                    `${commitText} by @${actor}\n\n` +
+                    `[View Changes](${data.compare})`;
+        }
+      }
+      else if (event === 'issue_comment' && watched.notifyComments) {
+        const action = data.action;
+        if (action === 'created') {
+          const comment = data.comment;
+          const isPR = !!data.issue.pull_request;
+          const type = isPR ? 'PR' : 'Issue';
+          message = `💬 **New Comment on ${type} in ${owner}/${repo}**\n\n` +
+                    `**${data.issue.title}**\n` +
+                    `By: @${actor}\n\n` +
+                    `[View Comment](${comment.html_url})`;
+        }
+      }
 
-        if (message) {
-          try {
-            console.log(`Sending message to ${watched.user.telegramId}`);
-            await bot.telegram.sendMessage(watched.user.telegramId.toString(), message, {
-              parse_mode: 'Markdown',
-            });
-            console.log('Message sent successfully');
-          } catch (err) {
-            console.error(`Failed to send Telegram message to ${watched.user.telegramId}:`, err);
-          }
+      if (message) {
+        try {
+          await bot.telegram.sendMessage(watched.user.telegramId.toString(), message, {
+            parse_mode: 'Markdown',
+            link_preview_options: { is_disabled: true },
+          });
+        } catch (err) {
+          console.error(`Failed to send Telegram message to ${watched.user.telegramId}:`, err);
         }
       }
     }
-
-    // Add handlers for other events as needed (PRs, Pushes, etc.)
 
     return NextResponse.json({ ok: true });
   } catch (error) {
