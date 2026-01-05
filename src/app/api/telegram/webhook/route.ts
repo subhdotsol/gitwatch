@@ -36,12 +36,12 @@ bot.start(async (ctx) => {
     
     if (!registrationCheck.allowed) {
       await ctx.reply(
-        `🚫 **GitWatch is at capacity**\n\n` +
+        `🚫 <b>GitWatch is at capacity</b>\n\n` +
         `We currently have ${registrationCheck.currentUsers}/${registrationCheck.maxUsers} users.\n\n` +
         `Join the waitlist to be notified when spots open:\n` +
         `${registrationCheck.waitlistUrl || 'Coming soon!'}\n\n` +
         `Thank you for your interest! 🙏`,
-        { parse_mode: 'Markdown' }
+        { parse_mode: 'HTML' }
       );
       return;
     }
@@ -63,24 +63,24 @@ bot.start(async (ctx) => {
   if (payload === 'connected') {
     if (user.githubUsername) {
       await ctx.reply(
-        `**Welcome back, ${username}**\n\n` +
-        `✅ Your GitHub account (**${user.githubUsername}**) is connected.\n\n` +
-        `Use \`/watch owner/repo\` to start tracking repositories!`,
-        { parse_mode: 'Markdown' }
+        `<b>Welcome back, ${username}</b>\n\n` +
+        `✅ Your GitHub account (<b>${user.githubUsername}</b>) is connected.\n\n` +
+        `Use <code>/watch owner/repo</code> to start tracking repositories!`,
+        { parse_mode: 'HTML' }
       );
       return;
     }
   }
   
   await ctx.reply(
-    `**Welcome to GitWatch**, ${username}\n\n` +
+    `<b>Welcome to GitWatch</b>, ${username}\n\n` +
     `Connect your GitHub account to get started:\n` +
-    `[Authorize GitHub](${authUrl})\n\n` +
-    `**Features:**\n` +
+    `<a href="${authUrl}">Authorize GitHub</a>\n\n` +
+    `<b>Features:</b>\n` +
     `- Real-time notifications\n` +
     `- Per-repository preferences\n` +
     `- Manage issues from Telegram`,
-    { parse_mode: 'Markdown' }
+    { parse_mode: 'HTML' }
   );
 });
 

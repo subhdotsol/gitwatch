@@ -28,13 +28,14 @@ bot.start(async (ctx) => {
     const authUrl = `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/github?telegram_id=${telegramId}`;
     
     await ctx.reply(
-      `👋 Welcome to GitWatch, ${username}!\n\n` +
+      `👋 <b>Welcome to GitWatch</b>, ${username}!\n\n` +
       `To get started, connect your GitHub account.\n\n` +
-      `Click this link to authorize:\n${authUrl}\n\n` +
+      `Click this link to authorize:\n<a href="${authUrl}">Authorize GitHub</a>\n\n` +
       `Once connected, you can:\n` +
       `• Add repositories to watch\n` +
       `• Get real-time notifications\n` +
-      `• Manage issues directly from Telegram`
+      `• Manage issues directly from Telegram`,
+      { parse_mode: 'HTML' }
     );
 });
 
