@@ -7,9 +7,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+---
+
+## [0.3.0] - 2026-01-05
+
 ### Added
-- FAQ.md with capacity and scaling documentation
-- CHANGELOG.md for tracking updates
+- **Subscription System**
+  - Free plan: 2 repos per user
+  - Premium plan: 5 repos per user ($5/month)
+  - Plan field added to User model in database
+
+- **Admin Commands** (admin only via `ADMIN_TELEGRAM_ID`)
+  - `/approve @user` - Upgrade user to Premium
+  - `/downgrade @user [reason]` - Remove Premium with notification
+  - `/stats` - View platform statistics
+  - `/reject @user reason` - Send rejection message
+
+- **User Commands**
+  - `/status` - Shows plan, repo count, watched repos
+  - `/upgrade` - Shows pricing with real-time USD→INR conversion
+  - `/confirm` - Placeholder for future self-service payments
+
+- **Platform Limits**
+  - Max 100 users (configurable in `limits.ts`)
+  - New users blocked when at capacity with waitlist message
+  - Repo limits enforced on `/watch` command
+
+- **Push Notifications Enhancement**
+  - Commit messages now shown in push notifications (up to 3)
+
+- **Admin Scripts**
+  - `scripts/broadcast.ts` - Send message to all users
+  - `scripts/upgrade-user.ts` - Upgrade user via command line
+
+### Changed
+- `/upgrade` now fetches real-time exchange rate for INR pricing
+- Switched to HTML parse mode in several commands for better compatibility
+
+### Fixed
+- Markdown parsing errors with special characters in usernames/repos
 
 ---
 
@@ -71,23 +107,13 @@ When making changes, add an entry under `[Unreleased]` using these categories:
    - **MINOR** (0.2.0): New features, backwards compatible
    - **PATCH** (0.1.1): Bug fixes, backwards compatible
 
-### Example Entry
-
-```markdown
-## [0.2.1] - 2026-01-10
-
-### Fixed
-- Duplicate notifications when webhook and polling both active (#23)
-
-### Changed
-- Increased `MAX_REPOS_PER_CRON` from 500 to 750
-```
-
 ---
 
 ## Version History
 
 | Version | Date | Highlights |
 |---------|------|------------|
+| 0.3.0 | 2026-01-05 | Subscription system, admin commands |
 | 0.2.0 | 2026-01-05 | Parallel polling (10x capacity) |
 | 0.1.0 | 2026-01-04 | Initial release |
+
