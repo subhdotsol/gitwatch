@@ -37,9 +37,15 @@ export function registerStatusCommand(bot: Telegraf) {
         ? user.watchedRepos.map(r => `  • ${r.owner}/${r.repo}`).join('\n')
         : '  None yet';
 
-      const upgradeHint = repoLimit.current >= repoLimit.limit 
-        ? '💎 Upgrade to Premium for 5 repos: /upgrade' 
-        : `You can add ${repoLimit.limit - repoLimit.current} more repos`;
+      // Only show upgrade hint for free users
+      let upgradeHint = `You can add ${repoLimit.limit - repoLimit.current} more repos`;
+      if (plan === 'free' && repoLimit.current >= repoLimit.limit) {
+        upgradeHint = '💎 Upgrade to Premium for 5 repos: /upgrade';
+      } else if (plan === 'premium') {
+        upgradeHint = repoLimit.current >= repoLimit.limit 
+          ? '✨ You\'re at your Premium limit (5 repos)'
+          : `✨ Premium: You can add ${repoLimit.limit - repoLimit.current} more repos`;
+      }
 
       await ctx.reply(
         `📊 <b>Your GitWatch Status</b>\n\n` +
