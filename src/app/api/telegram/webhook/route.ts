@@ -6,6 +6,9 @@ import { registerWatchlistCommand } from '../../../../../lib/telegram/commands/w
 import { registerDisconnectCommand } from '../../../../../lib/telegram/commands/disconnect';
 import { registerUnwatchCommand } from '../../../../../lib/telegram/commands/unwatch';
 import { registerStatusCommand } from '../../../../../lib/telegram/commands/status';
+import { registerAdminCommands } from '../../../../../lib/telegram/commands/admin';
+import { registerUpgradeCommand } from '../../../../../lib/telegram/commands/upgrade';
+import { registerConfirmCommand } from '../../../../../lib/telegram/commands/confirm';
 
 // Initialize bot (without launch - we'll handle updates via webhook)
 const bot = new Telegraf(process.env.TELEGRAM_BOT_TOKEN!);
@@ -87,6 +90,9 @@ registerWatchlistCommand(bot);
 registerDisconnectCommand(bot);
 registerUnwatchCommand(bot);
 registerStatusCommand(bot);
+registerUpgradeCommand(bot);
+registerConfirmCommand(bot);
+registerAdminCommands(bot);
 
 // Set bot commands for UI suggestions
 bot.telegram.setMyCommands([
@@ -95,6 +101,7 @@ bot.telegram.setMyCommands([
   { command: 'watchlist', description: 'View all watched repositories' },
   { command: 'unwatch', description: 'Stop watching a repository' },
   { command: 'status', description: 'Check your plan and usage' },
+  { command: 'upgrade', description: 'Upgrade to Premium' },
   { command: 'disconnect', description: 'Disconnect GitHub and remove all watches' },
   { command: 'help', description: 'Show help message' },
 ]);

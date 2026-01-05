@@ -116,3 +116,9 @@ Use /status to see your updated plan.`;
 }
 
 main().catch(console.error);
+
+
+// # By username
+// npx tsx scripts/upgrade-user.ts @PrakharBizz
+// # By Telegram ID
+// npx tsx scripts/upgrade-user.ts 123456789
