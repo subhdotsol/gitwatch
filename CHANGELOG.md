@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **GitHub OAuth "missing telegram_id" error** - Telegram's Markdown parser was misinterpreting underscores in the auth URL. Switched `/start` command messages to HTML parse mode for reliable link handling.
+
 ---
 
 ## [0.3.0] - 2026-01-05
