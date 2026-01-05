@@ -102,6 +102,7 @@ bot.telegram.setMyCommands([
   { command: 'unwatch', description: 'Stop watching a repository' },
   { command: 'status', description: 'Check your plan and usage' },
   { command: 'upgrade', description: 'Upgrade to Premium' },
+  { command: 'confirm', description: 'Submit payment proof' },
   { command: 'disconnect', description: 'Disconnect GitHub and remove all watches' },
   { command: 'help', description: 'Show help message' },
 ]);
