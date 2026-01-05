@@ -265,6 +265,9 @@ function formatEventMessage(event: any, owner: string, repo: string, currentUser
       const branch = event.payload.ref ? event.payload.ref.replace('refs/heads/', '') : 'unknown';
       const commits = event.payload.commits || [];
       const commitCount = event.payload.size ?? commits.length ?? 0;
+      
+      if (commitCount === 0) return null;
+      
       const commitText = commitCount === 1 ? '1 new commit' : `${commitCount} new commits`;
       
       // Get commit messages (up to 3)
