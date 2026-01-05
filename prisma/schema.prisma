@@ -9,13 +9,15 @@ datasource db {
 }
 
 model User {
-  id               String   @id @default(cuid())
-  telegramId       BigInt   @unique
+  id               String    @id @default(cuid())
+  telegramId       BigInt    @unique
   telegramUsername String?
   githubToken      String?
   githubUsername   String?
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  plan             Plan      @default(free)
+  planExpiresAt    DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
   watchedRepos WatchedRepo[]
 
@@ -47,4 +49,9 @@ model WatchedRepo {
 enum WatchMode {
   webhook
   polling
+}
+
+enum Plan {
+  free
+  premium
 }

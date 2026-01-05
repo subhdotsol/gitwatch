@@ -252,4 +252,53 @@ This document tracks all current and planned features for GitWatch.
 
 ---
 
+## 🚀 Coming Soon: Subscription System
+
+The following features are actively being developed for the next release:
+
+### Pricing Tiers
+
+| Tier | Repos | Price | Features |
+|------|-------|-------|----------|
+| **Free** | 2 repos | $0 | Polling + Webhook notifications |
+| **Premium** | 5 repos | $5/month | Priority polling, all features |
+
+### Payment Methods
+
+| Method | Currency | Status |
+|--------|----------|--------|
+| USDC (Solana) | USD | 🚧 In Progress |
+| Bank Transfer / UPI | INR | 🚧 In Progress |
+
+### New Commands
+
+| Command | Description | Status |
+|---------|-------------|--------|
+| `/upgrade` | View premium plans and payment options | 🚧 |
+| `/confirm <txn>` | Submit payment proof | 🚧 |
+| `/status` | Check your plan and usage | 🚧 |
+| `/approve @user` | Admin: Approve payment | 🚧 |
+| `/reject @user` | Admin: Reject payment | 🚧 |
+| `/stats` | Admin: Platform statistics | 🚧 |
+
+### Platform Limits (Configurable)
+
+| Setting | Default | Purpose |
+|---------|---------|---------|
+| `maxUsers` | 100 | Maximum users on platform |
+| `waitlistEnabled` | true | Show waitlist when at capacity |
+| `free.maxRepos` | 2 | Repos per free user |
+| `premium.maxRepos` | 5 | Repos per premium user |
+
+All limits are centralized in a single config file for easy adjustments.
+
+### Technical Implementation
+
+- **Database:** New `Payment` model + `plan` field on User
+- **Config:** `lib/config/limits.ts` for all adjustable limits
+- **Enforcement:** Limit checks on `/watch` and registration
+- **Expiry:** Cron job to handle subscription renewals
+
+---
+
 [← Back to README](./README.md)

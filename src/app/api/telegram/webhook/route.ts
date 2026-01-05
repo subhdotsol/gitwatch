@@ -5,6 +5,7 @@ import { registerHelpCommand } from '../../../../../lib/telegram/commands/help';
 import { registerWatchlistCommand } from '../../../../../lib/telegram/commands/watchlist';
 import { registerDisconnectCommand } from '../../../../../lib/telegram/commands/disconnect';
 import { registerUnwatchCommand } from '../../../../../lib/telegram/commands/unwatch';
+import { registerStatusCommand } from '../../../../../lib/telegram/commands/status';
 
 // Initialize bot (without launch - we'll handle updates via webhook)
 const bot = new Telegraf(process.env.TELEGRAM_BOT_TOKEN!);
@@ -12,12 +13,36 @@ const bot = new Telegraf(process.env.TELEGRAM_BOT_TOKEN!);
 // Register commands
 bot.start(async (ctx) => {
   const { prisma } = await import('../../../../../lib/prisma');
+  const { canUserRegister } = await import('../../../../../lib/subscription/check-limits');
+  
   const telegramId = BigInt(ctx.from?.id);
   const username = ctx.from?.username || ctx.from?.first_name;
   
   // Check for deep link parameters
   // Telegram format: /start payload
   const payload = ctx.message.text.split(' ')[1];
+
+  // Check if user already exists
+  const existingUser = await prisma.user.findUnique({
+    where: { telegramId },
+  });
+
+  // If new user, check platform capacity
+  if (!existingUser) {
+    const registrationCheck = await canUserRegister();
+    
+    if (!registrationCheck.allowed) {
+      await ctx.reply(
+        `🚫 **GitWatch is at capacity**\n\n` +
+        `We currently have ${registrationCheck.currentUsers}/${registrationCheck.maxUsers} users.\n\n` +
+        `Join the waitlist to be notified when spots open:\n` +
+        `${registrationCheck.waitlistUrl || 'Coming soon!'}\n\n` +
+        `Thank you for your interest! 🙏`,
+        { parse_mode: 'Markdown' }
+      );
+      return;
+    }
+  }
 
   const user = await prisma.user.upsert({
     where: { telegramId },
@@ -61,6 +86,7 @@ registerHelpCommand(bot);
 registerWatchlistCommand(bot);
 registerDisconnectCommand(bot);
 registerUnwatchCommand(bot);
+registerStatusCommand(bot);
 
 // Set bot commands for UI suggestions
 bot.telegram.setMyCommands([
@@ -68,6 +94,7 @@ bot.telegram.setMyCommands([
   { command: 'watch', description: 'Watch a repository' },
   { command: 'watchlist', description: 'View all watched repositories' },
   { command: 'unwatch', description: 'Stop watching a repository' },
+  { command: 'status', description: 'Check your plan and usage' },
   { command: 'disconnect', description: 'Disconnect GitHub and remove all watches' },
   { command: 'help', description: 'Show help message' },
 ]);

@@ -1,6 +1,7 @@
 import { Telegraf, Markup } from 'telegraf';
 import { prisma } from '../../prisma';
 import { checkUserRateLimit } from '../../rate-limiter';
+import { canUserAddRepo } from '../../subscription/check-limits';
 
 export function registerWatchCommand(bot: Telegraf) {
   bot.command('watch', async (ctx) => {
@@ -26,6 +27,18 @@ export function registerWatchCommand(bot: Telegraf) {
       if (!user?.githubToken) {
         return ctx.reply(
           '⚠️ Please connect your GitHub account first using /start'
+        );
+      }
+
+      // Check if user can add more repos (plan limit)
+      const repoLimit = await canUserAddRepo(user.id, user.plan as 'free' | 'premium');
+      
+      if (!repoLimit.allowed) {
+        return ctx.reply(
+          `❌ **Repository limit reached**\n\n` +
+          `You're watching ${repoLimit.current}/${repoLimit.limit} repositories on the ${repoLimit.planName} plan.\n\n` +
+          `Upgrade to Premium (5 repos) with /upgrade`,
+          { parse_mode: 'Markdown' }
         );
       }
 
