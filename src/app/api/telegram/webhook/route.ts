@@ -104,6 +104,10 @@ bot.telegram.setMyCommands([
   { command: 'upgrade', description: 'Upgrade to Premium' },
   { command: 'confirm', description: 'Submit payment proof' },
   { command: 'disconnect', description: 'Disconnect GitHub and remove all watches' },
+  { command: 'approve', description: 'Manage: Approve Upgrade' },
+  { command: 'downgrade', description: 'Manage: Downgrade User' },
+  { command: 'reject', description: 'Manage: Reject Payment' },
+  { command: 'stats', description: 'Manage: View Stats' },
   { command: 'help', description: 'Show help message' },
 ]);
 
