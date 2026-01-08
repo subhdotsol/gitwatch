@@ -22,7 +22,7 @@ const MAX_REPOS_PER_CRON = 500; // Safety limit to prevent timeout
 // Recommended: every 5-10 minutes
 export async function GET(request: Request) {
   const startTime = Date.now();
-  
+
   try {
     // Verify this is a legitimate cron request (basic auth check)
     const authHeader = request.headers.get('authorization');
@@ -99,7 +99,7 @@ export async function GET(request: Request) {
 // Process a single repo - returns stats for aggregation
 async function pollSingleRepo(watchedRepo: any): Promise<{ checked: number; notifications: number; errors: number }> {
   const stats = { checked: 0, notifications: 0, errors: 0 };
-  
+
   try {
     const { owner, repo, user, lastPolled } = watchedRepo;
 
@@ -203,31 +203,45 @@ function formatEventMessage(event: any, owner: string, repo: string, currentUser
   const actor = event.actor?.login || 'Someone';
   // HTML escape function for special characters
   const escHtml = (text: string) => text ? text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') : '';
-  
+
   console.log(`Formatting event for ${owner}/${repo}`);
 
   switch (event.type) {
     case 'IssuesEvent':
       const issue = event.payload.issue;
       const issueAction = event.payload.action;
+
+      // Validate that we have the necessary issue data
+      if (!issue) {
+        console.error('IssuesEvent missing issue data');
+        return null;
+      }
+
+      // Construct issue URL (use html_url if available, otherwise construct it)
+      const issueUrl = issue.html_url || `https://github.com/${owner}/${repo}/issues/${issue.number}`;
+
       if (issueAction === 'opened' || issueAction === 'closed') {
         const issueStatus = issueAction === 'opened' ? 'New Issue' : 'Issue Closed';
         return (
           `<b>${issueStatus}</b>\n` +
           `Repo: ${escHtml(owner)}/${escHtml(repo)}\n` +
-          `Issue: ${escHtml(issue.title)}\n` +
+          `Issue: ${escHtml(issue.title || 'Untitled Issue')}\n` +
           `By: @${escHtml(actor)}\n\n` +
-          `<a href="${issue.html_url}">View Issue</a>`
+          `<a href="${issueUrl}">View Issue</a>`
         );
       } else if (issueAction === 'assigned') {
-        const assignee = event.payload.assignee.login;
+        const assignee = event.payload.assignee?.login;
+        if (!assignee) {
+          console.error('IssuesEvent assigned action missing assignee');
+          return null;
+        }
         const target = currentUser === assignee ? 'You have' : `@${escHtml(assignee)} has`;
         return (
           `<b>Issue Assigned</b>\n` +
           `Repo: ${escHtml(owner)}/${escHtml(repo)}\n` +
-          `Issue: ${escHtml(issue.title)}\n` +
+          `Issue: ${escHtml(issue.title || 'Untitled Issue')}\n` +
           `${target} been assigned by @${escHtml(actor)}\n\n` +
-          `<a href="${issue.html_url}">View Issue</a>`
+          `<a href="${issueUrl}">View Issue</a>`
         );
       }
       return null;
@@ -235,6 +249,18 @@ function formatEventMessage(event: any, owner: string, repo: string, currentUser
     case 'PullRequestEvent':
       const pr = event.payload.pull_request;
       const prAction = event.payload.action;
+
+      // Validate that we have the necessary PR data
+      if (!pr) {
+        console.error('PullRequestEvent missing pull_request data');
+        return null;
+      }
+
+      // Construct PR URL (use html_url if available, otherwise construct it)
+      const prUrl = pr.html_url || `https://github.com/${owner}/${repo}/pull/${pr.number}`;
+      console.log("pr-url :")
+      console.log(prUrl)
+
       if (prAction === 'opened' || prAction === 'closed') {
         let prStatus = 'New Pull Request';
         if (prAction === 'closed') {
@@ -244,19 +270,23 @@ function formatEventMessage(event: any, owner: string, repo: string, currentUser
         return (
           `<b>${prStatus}</b>\n` +
           `Repo: ${escHtml(owner)}/${escHtml(repo)}\n` +
-          `PR: ${escHtml(pr.title)}\n` +
+          `PR: ${escHtml(pr.title || 'Untitled PR')}\n` +
           `By: @${escHtml(actor)}\n\n` +
-          `<a href="${pr.html_url}">View PR</a>`
+          `<a href="${prUrl}">View PR</a>`
         );
       } else if (prAction === 'assigned') {
-        const assignee = event.payload.assignee.login;
+        const assignee = event.payload.assignee?.login;
+        if (!assignee) {
+          console.error('PullRequestEvent assigned action missing assignee');
+          return null;
+        }
         const target = currentUser === assignee ? 'You have' : `@${escHtml(assignee)} has`;
         return (
           `<b>PR Assigned</b>\n` +
           `Repo: ${escHtml(owner)}/${escHtml(repo)}\n` +
-          `PR: ${escHtml(pr.title)}\n` +
+          `PR: ${escHtml(pr.title || 'Untitled PR')}\n` +
           `${target} been assigned by @${escHtml(actor)}\n\n` +
-          `<a href="${pr.html_url}">View PR</a>`
+          `<a href="${prUrl}">View PR</a>`
         );
       }
       return null;
@@ -265,18 +295,18 @@ function formatEventMessage(event: any, owner: string, repo: string, currentUser
       const branch = event.payload.ref ? event.payload.ref.replace('refs/heads/', '') : 'unknown';
       const commits = event.payload.commits || [];
       const commitCount = event.payload.size ?? commits.length ?? 0;
-      
+
       if (commitCount === 0) return null;
-      
+
       const commitText = commitCount === 1 ? '1 new commit' : `${commitCount} new commits`;
-      
+
       // Get commit messages (up to 3)
       const commitMessages = commits
         .slice(0, 3)
         .map((c: any) => `• ${escHtml(c.message.split('\n')[0].substring(0, 50))}`)
         .join('\n');
       const moreCommits = commitCount > 3 ? `\n... and ${commitCount - 3} more` : '';
-      
+
       return (
         `<b>New Push</b>\n` +
         `Repo: ${escHtml(owner)}/${escHtml(repo)}\n` +
@@ -291,7 +321,7 @@ function formatEventMessage(event: any, owner: string, repo: string, currentUser
       const comment = event.payload.comment;
       const commentIssue = event.payload.issue;
       const type = !!commentIssue.pull_request ? 'PR' : 'Issue';
-      
+
       return (
         `<b>New Comment (${type})</b>\n` +
         `Repo: ${escHtml(owner)}/${escHtml(repo)}\n` +
