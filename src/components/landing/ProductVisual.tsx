@@ -55,7 +55,7 @@ export default function ProductVisual() {
                     {/* Right: iPhone 16 Pro Max Mockup (User provided) */}
                     <div className="relative w-max group z-30 flex-shrink-0 lg:scale-[0.85] origin-center">
                         <PhoneFrame>
-                            <img src="/telegrammock.jpeg" alt="GitWatch Telegram Interface" className="w-full h-auto block" />
+                            <img src="/telegrammock.png" alt="GitWatch Telegram Interface" className="w-full h-auto block" />
                         </PhoneFrame>
                     </div>
                 </div>

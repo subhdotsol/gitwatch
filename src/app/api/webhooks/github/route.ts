@@ -64,58 +64,72 @@ export async function POST(req: NextRequest) {
       if (event === 'issues' && watched.notifyIssues) {
         const action = data.action;
         const issue = data.issue;
+        // Construct URL manually if missing, add fallback for title
+        const issueNumber = data.number || issue?.number;
+        const issueUrl = issue?.html_url || (issueNumber ? `https://github.com/${owner}/${repo}/issues/${issueNumber}` : `https://github.com/${owner}/${repo}/issues`);
+        const issueTitle = issue?.title || `#${issueNumber || 'unknown'}`;
+        
         if (action === 'opened') {
           message = `<b>New Issue</b>\n` +
                     `Repo: ${owner}/${repo}\n` +
-                    `Issue: ${issue.title}\n` +
+                    `Issue: ${issueTitle}\n` +
                     `By: @${actor}\n\n` +
-                    `<a href="${issue.html_url}">View Issue</a>`;
+                    `<a href="${issueUrl}">View Issue</a>`;
         } else if (action === 'closed') {
           message = `<b>Issue Closed</b>\n` +
                     `Repo: ${owner}/${repo}\n` +
-                    `Issue: ${issue.title}\n` +
+                    `Issue: ${issueTitle}\n` +
                     `By: @${actor}\n\n` +
-                    `<a href="${issue.html_url}">View Issue</a>`;
+                    `<a href="${issueUrl}">View Issue</a>`;
         } else if (action === 'assigned') {
-          const assignee = data.assignee.login;
-          const target = watched.user.githubUsername === assignee ? 'You have' : `@${assignee} has`;
-          message = `<b>Issue Assigned</b>\n` +
-                    `Repo: ${owner}/${repo}\n` +
-                    `Issue: ${issue.title}\n` +
-                    `${target} been assigned by @${actor}\n\n` +
-                    `<a href="${issue.html_url}">View Issue</a>`;
+          const assignee = data.assignee?.login;
+          if (assignee) {
+            const target = watched.user.githubUsername === assignee ? 'You have' : `@${assignee} has`;
+            message = `<b>Issue Assigned</b>\n` +
+                      `Repo: ${owner}/${repo}\n` +
+                      `Issue: ${issueTitle}\n` +
+                      `${target} been assigned by @${actor}\n\n` +
+                      `<a href="${issueUrl}">View Issue</a>`;
+          }
         }
       } 
       else if (event === 'pull_request' && watched.notifyPRs) {
         const action = data.action;
         const pr = data.pull_request;
+        // Construct URL manually if missing, add fallback for title
+        const prNumber = data.number || pr?.number;
+        const prUrl = pr?.html_url || (prNumber ? `https://github.com/${owner}/${repo}/pull/${prNumber}` : `https://github.com/${owner}/${repo}/pulls`);
+        const prTitle = pr?.title || `#${prNumber || 'unknown'}`;
+        
         if (action === 'opened') {
           message = `<b>New Pull Request</b>\n` +
                     `Repo: ${owner}/${repo}\n` +
-                    `PR: ${pr.title}\n` +
+                    `PR: ${prTitle}\n` +
                     `By: @${actor}\n\n` +
-                    `<a href="${pr.html_url}">View PR</a>`;
+                    `<a href="${prUrl}">View PR</a>`;
         } else if (action === 'closed') {
-          const status = pr.merged ? 'Merged' : 'Closed';
+          const status = pr?.merged ? 'Merged' : 'Closed';
           message = `<b>PR ${status}</b>\n` +
                     `Repo: ${owner}/${repo}\n` +
-                    `PR: ${pr.title}\n` +
+                    `PR: ${prTitle}\n` +
                     `By: @${actor}\n\n` +
-                    `<a href="${pr.html_url}">View PR</a>`;
+                    `<a href="${prUrl}">View PR</a>`;
         } else if (action === 'assigned') {
-          const assignee = data.assignee.login;
-          const target = watched.user.githubUsername === assignee ? 'You have' : `@${assignee} has`;
-          message = `<b>PR Assigned</b>\n` +
-                    `Repo: ${owner}/${repo}\n` +
-                    `PR: ${pr.title}\n` +
-                    `${target} been assigned by @${actor}\n\n` +
-                    `<a href="${pr.html_url}">View PR</a>`;
+          const assignee = data.assignee?.login;
+          if (assignee) {
+            const target = watched.user.githubUsername === assignee ? 'You have' : `@${assignee} has`;
+            message = `<b>PR Assigned</b>\n` +
+                      `Repo: ${owner}/${repo}\n` +
+                      `PR: ${prTitle}\n` +
+                      `${target} been assigned by @${actor}\n\n` +
+                      `<a href="${prUrl}">View PR</a>`;
+          }
         }
       }
       else if (event === 'push' && watched.notifyCommits) {
         const commits = data.commits || [];
         if (commits.length > 0) {
-          const branch = data.ref.replace('refs/heads/', '');
+          const branch = data.ref?.replace('refs/heads/', '') || 'unknown';
           const commitCount = commits.length;
           const commitText = commitCount === 1 ? '1 new commit' : `${commitCount} new commits`;
           
@@ -125,29 +139,44 @@ export async function POST(req: NextRequest) {
           // Get commit messages (up to 3)
           const commitMessages = commits
             .slice(0, 3)
-            .map((c: any) => `• ${escHtml(c.message.split('\n')[0].substring(0, 50))}`)
+            .map((c: any) => `• ${escHtml(c.message?.split('\n')[0]?.substring(0, 50) || 'No message')}`)
             .join('\n');
           const moreCommits = commitCount > 3 ? `\n... and ${commitCount - 3} more` : '';
+          
+          // Construct compare URL if missing
+          const compareUrl = data.compare || 
+            (data.before && data.after ? `https://github.com/${owner}/${repo}/compare/${data.before}...${data.after}` : `https://github.com/${owner}/${repo}/commits/${branch}`);
           
           message = `<b>New Push</b>\n` +
                     `Repo: ${escHtml(owner)}/${escHtml(repo)}\n` +
                     `Branch: <code>${escHtml(branch)}</code>\n` +
                     `${commitText} by @${escHtml(actor)}\n\n` +
                     `<b>Commits:</b>\n${commitMessages}${moreCommits}\n\n` +
-                    `<a href="${data.compare}">View Changes</a>`;
+                    `<a href="${compareUrl}">View Changes</a>`;
         }
       }
       else if (event === 'issue_comment' && watched.notifyComments) {
         const action = data.action;
         if (action === 'created') {
           const comment = data.comment;
-          const isPR = !!data.issue.pull_request;
+          const isPR = !!data.issue?.pull_request;
           const type = isPR ? 'PR' : 'Issue';
+          // Construct URL manually if missing
+          const commentId = comment?.id;
+          const commentIssueNumber = data.issue?.number;
+          const commentUrl = comment?.html_url || 
+            (commentIssueNumber && commentId 
+              ? `https://github.com/${owner}/${repo}/issues/${commentIssueNumber}#issuecomment-${commentId}`
+              : commentIssueNumber 
+                ? `https://github.com/${owner}/${repo}/issues/${commentIssueNumber}`
+                : `https://github.com/${owner}/${repo}`);
+          const commentIssueTitle = data.issue?.title || `#${commentIssueNumber || 'unknown'}`;
+          
           message = `<b>New Comment (${type})</b>\n` +
                     `Repo: ${owner}/${repo}\n` +
-                    `On: ${data.issue.title}\n` +
+                    `On: ${commentIssueTitle}\n` +
                     `By: @${actor}\n\n` +
-                    `<a href="${comment.html_url}">View Comment</a>`;
+                    `<a href="${commentUrl}">View Comment</a>`;
         }
       }
 

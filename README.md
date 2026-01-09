@@ -46,6 +46,12 @@ GitWatch is a Telegram bot that monitors GitHub repositories and sends you insta
 
 **Watch any public repository** — not just your own. Track popular open-source projects, your team's repos, or projects you're contributing to.
 
+### 📱 Screenshots
+
+<div align="center">
+<img src="public/gitwatch_commands_and_notifications.jpg" alt="GitWatch Bot" width="600"/>
+</div>
+
 ---
 
 ## 🔧 How It Works
@@ -286,5 +292,7 @@ git push origin feature/amazing-feature
 **Built with ❤️ for the open-source community**
 
 [⭐ Star this repo](https://github.com/subhdotsol/gitwatch) • [🐛 Report Bug](https://github.com/subhdotsol/gitwatch/issues) • [✨ Request Feature](https://github.com/subhdotsol/gitwatch/issues)
+
+
 
 </div>

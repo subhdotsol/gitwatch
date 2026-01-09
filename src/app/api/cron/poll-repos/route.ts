@@ -210,24 +210,30 @@ function formatEventMessage(event: any, owner: string, repo: string, currentUser
     case 'IssuesEvent':
       const issue = event.payload.issue;
       const issueAction = event.payload.action;
+      // GitHub Events API may return abbreviated payloads - construct URL manually if missing
+      const issueNumber = event.payload.issue?.number || issue?.number;
+      const issueUrl = issue?.html_url || (issueNumber ? `https://github.com/${owner}/${repo}/issues/${issueNumber}` : `https://github.com/${owner}/${repo}/issues`);
+      const issueTitle = issue?.title || `#${issueNumber || 'unknown'}`;
+      
       if (issueAction === 'opened' || issueAction === 'closed') {
         const issueStatus = issueAction === 'opened' ? 'New Issue' : 'Issue Closed';
         return (
           `<b>${issueStatus}</b>\n` +
           `Repo: ${escHtml(owner)}/${escHtml(repo)}\n` +
-          `Issue: ${escHtml(issue.title)}\n` +
+          `Issue: ${escHtml(issueTitle)}\n` +
           `By: @${escHtml(actor)}\n\n` +
-          `<a href="${issue.html_url}">View Issue</a>`
+          `<a href="${issueUrl}">View Issue</a>`
         );
       } else if (issueAction === 'assigned') {
-        const assignee = event.payload.assignee.login;
+        const assignee = event.payload.assignee?.login;
+        if (!assignee) return null;
         const target = currentUser === assignee ? 'You have' : `@${escHtml(assignee)} has`;
         return (
           `<b>Issue Assigned</b>\n` +
           `Repo: ${escHtml(owner)}/${escHtml(repo)}\n` +
-          `Issue: ${escHtml(issue.title)}\n` +
+          `Issue: ${escHtml(issueTitle)}\n` +
           `${target} been assigned by @${escHtml(actor)}\n\n` +
-          `<a href="${issue.html_url}">View Issue</a>`
+          `<a href="${issueUrl}">View Issue</a>`
         );
       }
       return null;
@@ -235,28 +241,34 @@ function formatEventMessage(event: any, owner: string, repo: string, currentUser
     case 'PullRequestEvent':
       const pr = event.payload.pull_request;
       const prAction = event.payload.action;
+      // GitHub Events API may return abbreviated payloads - construct URL manually if missing
+      const prNumber = event.payload.number || pr?.number;
+      const prUrl = pr?.html_url || (prNumber ? `https://github.com/${owner}/${repo}/pull/${prNumber}` : `https://github.com/${owner}/${repo}/pulls`);
+      const prTitle = pr?.title || `#${prNumber || 'unknown'}`;
+      
       if (prAction === 'opened' || prAction === 'closed') {
         let prStatus = 'New Pull Request';
         if (prAction === 'closed') {
-          prStatus = pr.merged ? 'PR Merged' : 'PR Closed';
+          prStatus = pr?.merged ? 'PR Merged' : 'PR Closed';
         }
 
         return (
           `<b>${prStatus}</b>\n` +
           `Repo: ${escHtml(owner)}/${escHtml(repo)}\n` +
-          `PR: ${escHtml(pr.title)}\n` +
+          `PR: ${escHtml(prTitle)}\n` +
           `By: @${escHtml(actor)}\n\n` +
-          `<a href="${pr.html_url}">View PR</a>`
+          `<a href="${prUrl}">View PR</a>`
         );
       } else if (prAction === 'assigned') {
-        const assignee = event.payload.assignee.login;
+        const assignee = event.payload.assignee?.login;
+        if (!assignee) return null;
         const target = currentUser === assignee ? 'You have' : `@${escHtml(assignee)} has`;
         return (
           `<b>PR Assigned</b>\n` +
           `Repo: ${escHtml(owner)}/${escHtml(repo)}\n` +
-          `PR: ${escHtml(pr.title)}\n` +
+          `PR: ${escHtml(prTitle)}\n` +
           `${target} been assigned by @${escHtml(actor)}\n\n` +
-          `<a href="${pr.html_url}">View PR</a>`
+          `<a href="${prUrl}">View PR</a>`
         );
       }
       return null;
@@ -273,9 +285,14 @@ function formatEventMessage(event: any, owner: string, repo: string, currentUser
       // Get commit messages (up to 3)
       const commitMessages = commits
         .slice(0, 3)
-        .map((c: any) => `• ${escHtml(c.message.split('\n')[0].substring(0, 50))}`)
+        .map((c: any) => `• ${escHtml(c.message?.split('\n')[0]?.substring(0, 50) || 'No message')}`)
         .join('\n');
       const moreCommits = commitCount > 3 ? `\n... and ${commitCount - 3} more` : '';
+      
+      // Construct compare URL - fallback to commits page if before/head are missing
+      const compareUrl = (event.payload.before && event.payload.head) 
+        ? `https://github.com/${owner}/${repo}/compare/${event.payload.before}...${event.payload.head}`
+        : `https://github.com/${owner}/${repo}/commits/${branch}`;
       
       return (
         `<b>New Push</b>\n` +
@@ -283,21 +300,31 @@ function formatEventMessage(event: any, owner: string, repo: string, currentUser
         `Branch: <code>${escHtml(branch)}</code>\n` +
         `${commitText} by @${escHtml(actor)}\n\n` +
         `<b>Commits:</b>\n${commitMessages}${moreCommits}\n\n` +
-        `<a href="https://github.com/${owner}/${repo}/compare/${event.payload.before}...${event.payload.head}">View Changes</a>`
+        `<a href="${compareUrl}">View Changes</a>`
       );
 
     case 'IssueCommentEvent':
       if (event.payload.action !== 'created') return null;
       const comment = event.payload.comment;
       const commentIssue = event.payload.issue;
-      const type = !!commentIssue.pull_request ? 'PR' : 'Issue';
+      const type = !!commentIssue?.pull_request ? 'PR' : 'Issue';
+      // Construct URL manually if missing
+      const commentId = comment?.id;
+      const commentIssueNumber = commentIssue?.number;
+      const commentUrl = comment?.html_url || 
+        (commentIssueNumber && commentId 
+          ? `https://github.com/${owner}/${repo}/issues/${commentIssueNumber}#issuecomment-${commentId}`
+          : commentIssueNumber 
+            ? `https://github.com/${owner}/${repo}/issues/${commentIssueNumber}`
+            : `https://github.com/${owner}/${repo}`);
+      const commentIssueTitle = commentIssue?.title || `#${commentIssueNumber || 'unknown'}`;
       
       return (
         `<b>New Comment (${type})</b>\n` +
         `Repo: ${escHtml(owner)}/${escHtml(repo)}\n` +
-        `On: ${escHtml(commentIssue.title)}\n` +
+        `On: ${escHtml(commentIssueTitle)}\n` +
         `By: @${escHtml(actor)}\n\n` +
-        `<a href="${comment.html_url}">View Comment</a>`
+        `<a href="${commentUrl}">View Comment</a>`
       );
 
     default:
