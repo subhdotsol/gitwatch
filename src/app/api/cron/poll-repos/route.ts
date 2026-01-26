@@ -126,7 +126,46 @@ async function pollSingleRepo(watchedRepo: any): Promise<{ checked: number; noti
     );
 
     if (!eventsResponse.ok) {
-      console.error(`Failed to fetch events for ${owner}/${repo}: ${eventsResponse.status}`);
+      const status = eventsResponse.status;
+      console.error(`Failed to fetch events for ${owner}/${repo}: ${status}`);
+
+      // Handle specific error cases
+      if (status === 401 || status === 403 || status === 404) {
+        let reason = 'Unknown error';
+        let action = 'Please check the repository settings.';
+
+        if (status === 401) {
+          reason = 'GitHub authorization failed (Token expired or invalid)';
+          action = 'Please reconnect your GitHub account using /start';
+        } else if (status === 403) {
+          reason = 'Access denied (Rate limit or permissions)';
+          action = 'Please check repository permissions.';
+        } else if (status === 404) {
+          reason = 'Repository not found';
+          action = 'Please check if the repository still exists or if it was renamed.';
+        }
+
+        // Disable watching for this repo
+        await prisma.watchedRepo.update({
+          where: { id: watchedRepo.id },
+          data: { active: false },
+        });
+
+        // Notify user
+        try {
+          await telegram.sendMessage(user.telegramId.toString(), 
+            `⚠️ <b>Watching Paused</b>\n\n` +
+            `We've stopped watching <b>${owner}/${repo}</b>.\n` +
+            `<b>Reason:</b> ${reason}\n\n` +
+            `${action}\n\n` +
+            `You can re-enable it later with /watch.`, 
+            { parse_mode: 'HTML' }
+          );
+        } catch (e) {
+          console.error(`Failed to send error notification to ${user.telegramId}`, e);
+        }
+      }
+
       stats.errors++;
       return stats;
     }
